@@ -6,3 +6,6 @@
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# 자동 push 로그
+scripts/autopush.log
