@@ -1,0 +1,8 @@
+# Excel 작업 중 생기는 임시/잠금 파일
+~$*
+*.tmp
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
