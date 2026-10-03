@@ -76,8 +76,9 @@ h2 { font-size: 16px; margin: 32px 0 8px; }
 .filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 8px 0; }
 .filters .label { color: var(--text-secondary); font-size: 13px; }
 .filters .note { color: var(--text-muted); font-size: 12px; }
-.years, .seg { display: flex; flex-wrap: wrap; gap: 6px; }
-.years button, .seg button {
+.years { display: flex; flex-direction: column; gap: 8px; }
+.btn-group { display: flex; flex-wrap: wrap; gap: 6px; }
+.btn-group button {
   font: inherit;
   font-size: 13px;
   padding: 5px 10px;
@@ -87,8 +88,8 @@ h2 { font-size: 16px; margin: 32px 0 8px; }
   color: var(--text-primary);
   cursor: pointer;
 }
-.years button:hover, .seg button:hover { border-color: var(--accent); }
-.years button.active, .seg button.active {
+.btn-group button:hover { border-color: var(--accent); }
+.btn-group button.active {
   background: var(--accent-soft);
   border-color: var(--accent);
   color: var(--accent);

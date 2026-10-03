@@ -44,7 +44,7 @@ const GDP = [
 ];
 
 // ===== 상태 =====
-const state = { data: null, page: 'rates', year: {}, tenor: 10, legend: {} };
+const state = { data: null, page: 'rates', period: {}, tenor: 10, legend: {} };
 const charts = {};
 
 // ===== 유틸 =====
@@ -58,11 +58,15 @@ function findCol(cols, def) {
   return name ? cols[name] : null;
 }
 
-function yearRange(year) { return [Date.UTC(year, 0, 1), Date.UTC(year + 1, 0, 1)]; }
+// 기간: 연도 하나(1.1~12.31), 'N년 이후', MAX(전체)
+const RANGE_STARTS = [1990, 2000, 2010, 2020];
+const MAX_PERIOD = { key: 'max', label: 'MAX', from: -Infinity, to: Infinity };
+const sincePeriod = (y) => ({ key: `s${y}`, label: `${y}~`, from: Date.UTC(y, 0, 1), to: Infinity });
+const yearPeriod = (y) => ({ key: `y${y}`, label: `${y}`, from: Date.UTC(y, 0, 1), to: Date.UTC(y + 1, 0, 1), year: y });
+const periodName = (p) => (p.year ? `${p.year}년` : p.label);
 
-// 해당 연도(1.1~12.31) 구간의 [날짜, 값] 쌍만 뽑는다.
-function pointsInYear(dates, vals, year) {
-  const [from, to] = yearRange(year);
+// 기간 안의 [날짜, 값] 쌍만 뽑는다.
+function pointsInPeriod(dates, vals, { from, to }) {
   const out = [];
   for (let i = 0; i < dates.length; i++) {
     const t = dates[i];
@@ -73,19 +77,22 @@ function pointsInYear(dates, vals, year) {
   return out;
 }
 
-function buildSeries(defs, table, year) {
+function buildSeries(defs, table, period) {
   const missing = [];
   const series = defs.map((def) => {
     const col = findCol(table.cols, def);
     if (!col) { missing.push(def.label); return null; }
-    return { def, data: pointsInYear(table.dates, col, year) };
+    return { def, data: pointsInPeriod(table.dates, col, period) };
   }).filter(Boolean);
   return { series, missing };
 }
 
 // ===== 차트 옵션 =====
 // step: 기준금리처럼 계단식으로 바뀌는 지표
-function lineOption(chartId, built, { year, quarterly, step }) {
+function lineOption(chartId, built, { period, quarterly, step }) {
+  const single = !!period.year;
+  // 분기 데이터를 한 해만 볼 때는 1Q~4Q 카테고리 축, 그 외에는 시간 축
+  const byQuarter = quarterly && single;
   const text = css('--text-primary');
   const muted = css('--text-muted');
   const grid = css('--grid');
@@ -99,10 +106,10 @@ function lineOption(chartId, built, { year, quarterly, step }) {
     return {
       name: def.label,
       type: 'line',
-      data: quarterly ? data.map(([t, v]) => [quarterLabel(t).slice(5), v]) : data,
+      data: byQuarter ? data.map(([t, v]) => [quarterLabel(t).slice(5), v]) : data,
       color,
       step: step ? 'end' : false,
-      showSymbol: !!quarterly,
+      showSymbol: quarterly && data.length <= 40,
       symbol: 'circle',
       symbolSize: 8,
       itemStyle: { borderColor: surface, borderWidth: 2 },
@@ -124,7 +131,7 @@ function lineOption(chartId, built, { year, quarterly, step }) {
       textStyle: { color: text },
       formatter: (ps) => {
         if (!ps.length) return '';
-        const head = quarterly ? `${year}.${ps[0].axisValue}` : ymd(ps[0].axisValue);
+        const head = byQuarter ? `${period.year}.${ps[0].axisValue}` : quarterly ? quarterLabel(ps[0].axisValue) : ymd(ps[0].axisValue);
         const rows = ps
           .filter((p) => p.value && p.value[1] !== null)
           .sort((a, b) => b.value[1] - a.value[1])
@@ -132,14 +139,14 @@ function lineOption(chartId, built, { year, quarterly, step }) {
         return `<div style="margin-bottom:4px;color:${muted}">${head}</div>${rows.join('')}`;
       },
     },
-    xAxis: quarterly
+    xAxis: byQuarter
       ? { type: 'category', data: ['1Q', '2Q', '3Q', '4Q'], boundaryGap: false, axisLine: { lineStyle: { color: grid } }, axisLabel: { color: muted } }
       : {
           type: 'time',
-          min: yearRange(year)[0],
-          max: Date.UTC(year, 11, 31),
+          min: single ? period.from : Number.isFinite(period.from) ? period.from : 'dataMin',
+          max: single ? Date.UTC(period.year, 11, 31) : 'dataMax',
           axisLine: { lineStyle: { color: grid } },
-          axisLabel: { color: muted, formatter: '{M}월' },
+          axisLabel: { color: muted, formatter: single ? '{M}월' : '{yyyy}' },
           splitLine: { show: false },
         },
     yAxis: {
@@ -166,22 +173,22 @@ function render(chartId, option) {
 // ===== 페이지 =====
 function renderRates() {
   const { daily } = state.data;
-  const year = state.year.rates;
+  const period = state.period.rates;
 
-  render('chart-policy', lineOption('chart-policy', buildSeries(POLICY, daily, year), { year, step: true }));
+  render('chart-policy', lineOption('chart-policy', buildSeries(POLICY, daily, period), { period, step: true }));
 
-  const market = buildSeries(MARKET(state.tenor), daily, year);
-  render('chart-market', lineOption('chart-market', market, { year }));
+  const market = buildSeries(MARKET(state.tenor), daily, period);
+  render('chart-market', lineOption('chart-market', market, { period }));
   const empty = market.series.filter((s) => !s.data.length).map((s) => s.def.label);
   const notes = [];
   if (market.missing.length) notes.push(`${state.tenor}년물 데이터 없음: ${market.missing.join(', ')}`);
-  if (empty.length) notes.push(`${year}년 값 없음: ${empty.join(', ')}`);
+  if (empty.length) notes.push(`${periodName(period)} 값 없음: ${empty.join(', ')}`);
   document.getElementById('tenor-note').textContent = notes.join(' · ');
 }
 
 function renderGrowth() {
-  const year = state.year.growth;
-  render('chart-gdp', lineOption('chart-gdp', buildSeries(GDP, state.data.quarterly, year), { year, quarterly: true }));
+  const period = state.period.growth;
+  render('chart-gdp', lineOption('chart-gdp', buildSeries(GDP, state.data.quarterly, period), { period, quarterly: true }));
 }
 
 const PAGES = { rates: renderRates, growth: renderGrowth };
@@ -198,19 +205,25 @@ function showPage(page) {
 }
 
 // ===== 필터 버튼 =====
-function buttons(container, values, current, label, onPick) {
+// groups: 버튼 묶음 배열. 각 항목은 { key, label }. 묶음끼리는 줄을 나눠 표시하고, 선택은 전체에서 하나.
+function buttons(container, groups, currentKey, onPick) {
   container.innerHTML = '';
-  values.forEach((v) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.textContent = label(v);
-    b.classList.toggle('active', v === current);
-    b.onclick = () => {
-      container.querySelectorAll('button').forEach((x) => x.classList.remove('active'));
-      b.classList.add('active');
-      onPick(v);
-    };
-    container.appendChild(b);
+  groups.forEach((items) => {
+    const group = document.createElement('div');
+    group.className = 'btn-group';
+    items.forEach((item) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = item.label;
+      b.classList.toggle('active', item.key === currentKey);
+      b.onclick = () => {
+        container.querySelectorAll('button').forEach((x) => x.classList.remove('active'));
+        b.classList.add('active');
+        onPick(item);
+      };
+      group.appendChild(b);
+    });
+    container.appendChild(group);
   });
 }
 
@@ -243,10 +256,13 @@ function setupFilters() {
   const sets = { rates: [yearsWithData(daily, rateDefs), renderRates], growth: [yearsWithData(quarterly, GDP), renderGrowth] };
 
   for (const [page, [years, draw]] of Object.entries(sets)) {
-    state.year[page] = years[years.length - 1];
-    buttons(document.querySelector(`[data-years="${page}"]`), years, state.year[page], (y) => `${y}`, (y) => { state.year[page] = y; draw(); });
+    const ranges = [MAX_PERIOD, ...RANGE_STARTS.map(sincePeriod)];
+    const singles = years.map(yearPeriod);
+    state.period[page] = singles[singles.length - 1];
+    buttons(document.querySelector(`[data-years="${page}"]`), [ranges, singles], state.period[page].key, (p) => { state.period[page] = p; draw(); });
   }
-  buttons(document.getElementById('tenors'), TENORS, state.tenor, (t) => `${t}Y`, (t) => { state.tenor = t; renderRates(); });
+  const tenors = TENORS.map((t) => ({ key: t, label: `${t}Y` }));
+  buttons(document.getElementById('tenors'), [tenors], state.tenor, (t) => { state.tenor = t.key; renderRates(); });
 
   const d = lastDateWithData(daily, rateDefs);
   const q = lastDateWithData(quarterly, GDP);
