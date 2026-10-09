@@ -15,28 +15,8 @@
   --s-cn: #e87ba4; --s-uk: #008300; --s-au: #4a3aa7; --s-ca: #e34948;
   /* 한 국가 안에서 만기를 구분하는 색 (범주형 1~3번) */
   --slot-1: #2a78d6; --slot-2: #eb6834; --slot-3: #1baf7a;
-  /* Main 차트의 기준금리 선 */
+  /* 기준금리 선 (항상 검정. 대시보드는 라이트 모드 고정) */
   --base-rate: #0b0b0b;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --surface-0: #141413;
-    --surface-1: #1a1a19;
-    --sidebar: #1f1f1d;
-    --border: #33332f;
-    --grid: #2a2a27;
-    --text-primary: #ffffff;
-    --text-secondary: #c3c2b7;
-    --text-muted: #8f8e88;
-    --accent: #3987e5;
-    --accent-soft: #1d2c40;
-    --other-series: #8f8e88;
-    --s-kr: #3987e5; --s-us: #d95926; --s-eu: #199e70; --s-jp: #c98500;
-    --s-cn: #d55181; --s-uk: #008300; --s-au: #9085e9; --s-ca: #e66767;
-    --slot-1: #3987e5; --slot-2: #d95926; --slot-3: #199e70;
-    --base-rate: #ffffff;
-  }
 }
 
 * { box-sizing: border-box; }

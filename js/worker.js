@@ -2,7 +2,7 @@
 // Info 시트만 읽고, Main 시트(차트·작업용)는 건드리지 않는다.
 importScripts('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js');
 
-const SHEETS = { daily: 'Info(일)', quarterly: 'Info(분기)' };
+const SHEETS = { daily: 'Info(일)', monthly: 'Info(월)', quarterly: 'Info(분기)' };
 
 // Info 시트 구조: 2행 = 지표명, 3행 = 필드명, 4행~ = A열 날짜(엑셀 serial) + 값.
 // B열 지표명은 A2에 들어 있다(B2는 단위 표기).
@@ -39,6 +39,7 @@ onmessage = async (e) => {
     postMessage({
       ok: true,
       daily: readSheet(wb.Sheets[SHEETS.daily], { skipWeekends: true }),
+      monthly: readSheet(wb.Sheets[SHEETS.monthly], { skipWeekends: false }),
       quarterly: readSheet(wb.Sheets[SHEETS.quarterly], { skipWeekends: false }),
     });
   } catch (err) {

@@ -5,84 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Macro Dashboard</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-  <link rel="stylesheet" href="css/style.css">
+  <!-- ?v= 는 js/app.js 의 VERSION 과 같이 올린다 (브라우저 캐시 방지) -->
+  <link rel="stylesheet" href="css/style.css?v=20261009b">
 </head>
 <body>
   <aside class="sidebar">
     <div class="brand">Macro Dashboard</div>
-    <nav>
-      <a href="#rates" data-page="rates">금리</a>
-      <a href="#growth" data-page="growth">성장</a>
-    </nav>
+    <nav id="nav"></nav>
   </aside>
 
   <main>
     <p class="updated" id="updated">데이터 불러오는 중…</p>
-
-    <section class="page" id="page-rates">
-      <h1>금리</h1>
-      <nav class="subtabs" data-subtabs="rates">
-        <a href="#rates/main" data-sub="main">Main</a>
-        <a href="#rates/global" data-sub="global">글로벌</a>
-      </nav>
-      <p class="desc">Info(일) 시트 기준. 범례를 클릭하면 선을 켜고 끌 수 있어요.</p>
-      <div class="filters">
-        <span class="label">기간</span>
-        <div class="years" data-years="rates"></div>
-      </div>
-
-      <div class="subpage" data-subpage="rates/main">
-        <div class="chart-grid">
-          <div>
-            <h2>한국 기준금리 · 국고채 3년 · 10년</h2>
-            <p class="note" id="note-kr"></p>
-            <div class="chart" id="chart-kr"></div>
-          </div>
-          <div>
-            <h2>미국 기준금리 · 국채 2년 · 10년</h2>
-            <p class="note" id="note-us"></p>
-            <div class="chart" id="chart-us"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="subpage" data-subpage="rates/global">
-        <p class="note">회색 점선 국가는 기본 숨김이에요. 범례를 클릭하면 보여요.</p>
-        <div class="chart-grid">
-          <div>
-            <h2>주요국 기준금리 추이</h2>
-            <div class="filters filters-spacer"></div>
-            <div class="chart" id="chart-policy"></div>
-          </div>
-          <div>
-            <h2>주요국 시장금리 추이</h2>
-            <div class="filters">
-              <span class="label">만기</span>
-              <div class="seg" id="tenors"></div>
-              <span class="note" id="tenor-note"></span>
-            </div>
-            <div class="chart" id="chart-market"></div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="page" id="page-growth">
-      <h1>성장</h1>
-      <p class="desc">Info(분기) 시트 기준. 실질 GDP 성장률(전년동기비, %).</p>
-      <div class="filters">
-        <span class="label">기간</span>
-        <div class="years" data-years="growth"></div>
-      </div>
-
-      <h2>주요국 GDP 성장률 추이</h2>
-      <div class="chart" id="chart-gdp"></div>
-    </section>
-
+    <!-- 페이지는 js/app.js 의 PAGES 설정으로 만들어진다 -->
     <div class="loading" id="loading">엑셀 데이터를 읽는 중이에요…</div>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=20261009b"></script>
 </body>
 </html>
