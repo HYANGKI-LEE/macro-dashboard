@@ -21,22 +21,44 @@
 
     <section class="page" id="page-rates">
       <h1>금리</h1>
-      <p class="desc">Info(일) 시트 기준. 범례를 클릭하면 국가를 켜고 끌 수 있어요(회색 점선 국가는 기본 숨김).</p>
+      <nav class="subtabs" data-subtabs="rates">
+        <a href="#rates/main" data-sub="main">Main</a>
+        <a href="#rates/global" data-sub="global">글로벌</a>
+      </nav>
+      <p class="desc">Info(일) 시트 기준. 범례를 클릭하면 선을 켜고 끌 수 있어요.</p>
       <div class="filters">
         <span class="label">기간</span>
         <div class="years" data-years="rates"></div>
       </div>
 
-      <h2>주요국 기준금리 추이</h2>
-      <div class="chart" id="chart-policy"></div>
-
-      <h2>주요국 시장금리 추이</h2>
-      <div class="filters">
-        <span class="label">만기</span>
-        <div class="seg" id="tenors"></div>
-        <span class="note" id="tenor-note"></span>
+      <div class="subpage" data-subpage="rates/main">
+        <div class="chart-grid">
+          <div>
+            <h2>한국 기준금리 · 국고채 3년 · 10년</h2>
+            <p class="note" id="note-kr"></p>
+            <div class="chart" id="chart-kr"></div>
+          </div>
+          <div>
+            <h2>미국 기준금리 · 국채 2년 · 10년</h2>
+            <p class="note" id="note-us"></p>
+            <div class="chart" id="chart-us"></div>
+          </div>
+        </div>
       </div>
-      <div class="chart" id="chart-market"></div>
+
+      <div class="subpage" data-subpage="rates/global">
+        <h2>주요국 기준금리 추이</h2>
+        <p class="note">회색 점선 국가는 기본 숨김이에요. 범례를 클릭하면 보여요.</p>
+        <div class="chart" id="chart-policy"></div>
+
+        <h2>주요국 시장금리 추이</h2>
+        <div class="filters">
+          <span class="label">만기</span>
+          <div class="seg" id="tenors"></div>
+          <span class="note" id="tenor-note"></span>
+        </div>
+        <div class="chart" id="chart-market"></div>
+      </div>
     </section>
 
     <section class="page" id="page-growth">

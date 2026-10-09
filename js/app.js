@@ -15,6 +15,18 @@ const POLICY = [
   { other: true, hidden: true, dash: [2, 6], label: '뉴질랜드', prefix: '뉴질랜드:기준금리' },
 ];
 
+// 금리 > Main: 국가별 기준금리와 대표 만기 금리. color는 css 토큰, step은 계단식 선.
+const KR_MAIN = [
+  { color: '--slot-1', step: true, label: '기준금리', prefix: '한국:기준금리' },
+  { color: '--slot-2', label: '국고채 3년', exact: '금투협 최종호가 국고채권(3년)' },
+  { color: '--slot-3', label: '국고채 10년', exact: '금투협 최종호가 국고채권(10년)' },
+];
+const US_MAIN = [
+  { color: '--slot-1', step: true, label: '기준금리(상단)', prefix: '미국:기준금리 상단' },
+  { color: '--slot-2', label: '국채 2년', exact: '미국(종합) 2년' },
+  { color: '--slot-3', label: '국채 10년', exact: '미국(종합) 10년' },
+];
+
 const TENORS = [2, 5, 10, 20, 30];
 const MARKET = (t) => [
   { key: 'kr', label: '한국', exact: `금투협 최종호가 국고채권(${t}년)` },
@@ -44,7 +56,7 @@ const GDP = [
 ];
 
 // ===== 상태 =====
-const state = { data: null, page: 'rates', period: {}, tenor: 10, legend: {} };
+const state = { data: null, page: 'rates', sub: { rates: 'main' }, period: {}, tenor: 10, legend: {} };
 const charts = {};
 
 // ===== 유틸 =====
@@ -102,13 +114,13 @@ function lineOption(chartId, built, { period, quarterly, step }) {
   const selected = { ...Object.fromEntries(built.series.map((s) => [s.def.label, !s.def.hidden])), ...state.legend[chartId] };
 
   const series = built.series.map(({ def, data }) => {
-    const color = def.other ? other : css(`--s-${def.key}`);
+    const color = def.other ? other : css(def.color || `--s-${def.key}`);
     return {
       name: def.label,
       type: 'line',
       data: byQuarter ? data.map(([t, v]) => [quarterLabel(t).slice(5), v]) : data,
       color,
-      step: step ? 'end' : false,
+      step: step || def.step ? 'end' : false,
       showSymbol: quarterly && data.length <= 40,
       symbol: 'circle',
       symbolSize: 8,
@@ -172,6 +184,25 @@ function render(chartId, option) {
 
 // ===== 페이지 =====
 function renderRates() {
+  if (state.sub.rates === 'main') renderRatesMain();
+  else renderRatesGlobal();
+}
+
+function renderRatesMain() {
+  const { daily } = state.data;
+  const period = state.period.rates;
+  for (const [id, defs] of [['kr', KR_MAIN], ['us', US_MAIN]]) {
+    const built = buildSeries(defs, daily, period);
+    render(`chart-${id}`, lineOption(`chart-${id}`, built, { period }));
+    const empty = built.series.filter((s) => !s.data.length).map((s) => s.def.label);
+    const notes = [];
+    if (built.missing.length) notes.push(`Info(일)에 열이 없어 표시 안 됨: ${built.missing.join(', ')}`);
+    if (empty.length) notes.push(`${periodName(period)} 값 없음: ${empty.join(', ')}`);
+    document.getElementById(`note-${id}`).textContent = notes.join(' · ');
+  }
+}
+
+function renderRatesGlobal() {
   const { daily } = state.data;
   const period = state.period.rates;
 
@@ -193,9 +224,17 @@ function renderGrowth() {
 
 const PAGES = { rates: renderRates, growth: renderGrowth };
 
-function showPage(page) {
+// 주소 형식: #페이지 또는 #페이지/하위탭 (예: #rates/global)
+function showPage(hash) {
+  let [page, sub] = hash.split('/');
   if (!PAGES[page]) page = 'rates';
   state.page = page;
+  if (state.sub[page]) {
+    const subs = [...document.querySelectorAll(`[data-subtabs="${page}"] a`)].map((a) => a.dataset.sub);
+    if (subs.includes(sub)) state.sub[page] = sub;
+    document.querySelectorAll(`[data-subtabs="${page}"] a`).forEach((a) => a.classList.toggle('active', a.dataset.sub === state.sub[page]));
+    document.querySelectorAll(`[data-subpage^="${page}/"]`).forEach((s) => s.classList.toggle('active', s.dataset.subpage === `${page}/${state.sub[page]}`));
+  }
   document.querySelectorAll('.page').forEach((s) => s.classList.toggle('active', s.id === `page-${page}`));
   document.querySelectorAll('.sidebar a').forEach((a) => a.classList.toggle('active', a.dataset.page === page));
   if (state.data) {

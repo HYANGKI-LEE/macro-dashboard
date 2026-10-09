@@ -13,6 +13,8 @@
   --other-series: #8a8984;
   --s-kr: #2a78d6; --s-us: #eb6834; --s-eu: #1baf7a; --s-jp: #eda100;
   --s-cn: #e87ba4; --s-uk: #008300; --s-au: #4a3aa7; --s-ca: #e34948;
+  /* 한 국가 안에서 만기를 구분하는 색 (범주형 1~3번) */
+  --slot-1: #2a78d6; --slot-2: #eb6834; --slot-3: #1baf7a;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -30,6 +32,7 @@
     --other-series: #8f8e88;
     --s-kr: #3987e5; --s-us: #d95926; --s-eu: #199e70; --s-jp: #c98500;
     --s-cn: #d55181; --s-uk: #008300; --s-au: #9085e9; --s-ca: #e66767;
+    --slot-1: #3987e5; --slot-2: #d95926; --slot-3: #199e70;
   }
 }
 
@@ -70,8 +73,24 @@ h1 { font-size: 26px; margin: 0 0 8px; }
 h2 { font-size: 16px; margin: 32px 0 8px; }
 .desc { margin: 0 0 16px; color: var(--text-secondary); font-size: 13px; }
 
-.page { display: none; }
-.page.active { display: block; }
+.page, .subpage { display: none; }
+.page.active, .subpage.active { display: block; }
+
+.subtabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin: 8px 0 16px; }
+.subtabs a {
+  padding: 10px 14px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.subtabs a:hover { color: var(--text-primary); }
+.subtabs a.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+.chart-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; }
+.chart-grid .chart { height: 400px; }
+p.note { margin: 0 0 4px; min-height: 1em; color: var(--text-muted); font-size: 12px; }
 
 .filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 8px 0; }
 .filters .label { color: var(--text-secondary); font-size: 13px; }
@@ -114,5 +133,6 @@ h2 { font-size: 16px; margin: 32px 0 8px; }
   .sidebar nav { display: flex; gap: 6px; }
   .sidebar nav a { margin: 0; }
   main { padding: 16px 16px 40px; }
-  .chart { height: 360px; }
+  .chart, .chart-grid .chart { height: 360px; }
+  .chart-grid { grid-template-columns: 1fr; }
 }
