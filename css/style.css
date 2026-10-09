@@ -15,6 +15,8 @@
   --s-cn: #e87ba4; --s-uk: #008300; --s-au: #4a3aa7; --s-ca: #e34948;
   /* 한 국가 안에서 만기를 구분하는 색 (범주형 1~3번) */
   --slot-1: #2a78d6; --slot-2: #eb6834; --slot-3: #1baf7a;
+  /* Main 차트의 기준금리 선 */
+  --base-rate: #0b0b0b;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -33,6 +35,7 @@
     --s-kr: #3987e5; --s-us: #d95926; --s-eu: #199e70; --s-jp: #c98500;
     --s-cn: #d55181; --s-uk: #008300; --s-au: #9085e9; --s-ca: #e66767;
     --slot-1: #3987e5; --slot-2: #d95926; --slot-3: #199e70;
+    --base-rate: #ffffff;
   }
 }
 
@@ -90,6 +93,8 @@ h2 { font-size: 16px; margin: 32px 0 8px; }
 
 .chart-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; }
 .chart-grid .chart { height: 400px; }
+/* 옆 칸의 만기 버튼 줄만큼 높이를 맞춰 두 차트의 위치를 정렬 */
+.filters-spacer { min-height: 27px; }
 p.note { margin: 0 0 4px; min-height: 1em; color: var(--text-muted); font-size: 12px; }
 
 .filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 8px 0; }
@@ -135,4 +140,5 @@ p.note { margin: 0 0 4px; min-height: 1em; color: var(--text-muted); font-size: 
   main { padding: 16px 16px 40px; }
   .chart, .chart-grid .chart { height: 360px; }
   .chart-grid { grid-template-columns: 1fr; }
+  .filters-spacer { display: none; }
 }

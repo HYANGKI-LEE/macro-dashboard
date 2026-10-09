@@ -47,17 +47,23 @@
       </div>
 
       <div class="subpage" data-subpage="rates/global">
-        <h2>주요국 기준금리 추이</h2>
         <p class="note">회색 점선 국가는 기본 숨김이에요. 범례를 클릭하면 보여요.</p>
-        <div class="chart" id="chart-policy"></div>
-
-        <h2>주요국 시장금리 추이</h2>
-        <div class="filters">
-          <span class="label">만기</span>
-          <div class="seg" id="tenors"></div>
-          <span class="note" id="tenor-note"></span>
+        <div class="chart-grid">
+          <div>
+            <h2>주요국 기준금리 추이</h2>
+            <div class="filters filters-spacer"></div>
+            <div class="chart" id="chart-policy"></div>
+          </div>
+          <div>
+            <h2>주요국 시장금리 추이</h2>
+            <div class="filters">
+              <span class="label">만기</span>
+              <div class="seg" id="tenors"></div>
+              <span class="note" id="tenor-note"></span>
+            </div>
+            <div class="chart" id="chart-market"></div>
+          </div>
         </div>
-        <div class="chart" id="chart-market"></div>
       </div>
     </section>
 

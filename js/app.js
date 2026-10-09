@@ -17,12 +17,12 @@ const POLICY = [
 
 // 금리 > Main: 국가별 기준금리와 대표 만기 금리. color는 css 토큰, step은 계단식 선.
 const KR_MAIN = [
-  { color: '--slot-1', step: true, label: '기준금리', prefix: '한국:기준금리' },
+  { color: '--base-rate', step: true, label: '기준금리', prefix: '한국:기준금리' },
   { color: '--slot-2', label: '국고채 3년', exact: '금투협 최종호가 국고채권(3년)' },
   { color: '--slot-3', label: '국고채 10년', exact: '금투협 최종호가 국고채권(10년)' },
 ];
 const US_MAIN = [
-  { color: '--slot-1', step: true, label: '기준금리(상단)', prefix: '미국:기준금리 상단' },
+  { color: '--base-rate', step: true, label: '기준금리(상단)', prefix: '미국:기준금리 상단' },
   { color: '--slot-2', label: '국채 2년', exact: '미국(종합) 2년' },
   { color: '--slot-3', label: '국채 10년', exact: '미국(종합) 10년' },
 ];
