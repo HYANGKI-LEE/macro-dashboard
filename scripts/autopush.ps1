@@ -1,4 +1,4 @@
-# Commits and pushes data/Macro.xlsx when it has changed.
+# Commits and pushes data/Macro.xlsx when it has changed, after pulling any GitHub-side commits.
 # Run every 10 minutes by Windows Task Scheduler (task: MacroDashboardAutoPush) via autopush.vbs.
 $ErrorActionPreference = 'Stop'
 $env:GIT_TERMINAL_PROMPT = '0'
@@ -29,6 +29,13 @@ try {
 
   # Push any local commits not yet on GitHub (also retries a push that failed last time).
   git -C $repo fetch -q origin main
+  # GitHub Actions commits data/fred.json daily, so bring those in first.
+  $behind = [int](git -C $repo rev-list --count main..origin/main)
+  if ($behind -gt 0) {
+    git -C $repo pull -q --rebase --autostash origin main
+    if ($LASTEXITCODE -ne 0) { throw "git pull --rebase failed" }
+    Log "pulled $behind commit(s)"
+  }
   $ahead = [int](git -C $repo rev-list --count origin/main..main)
   if ($ahead -gt 0) {
     git -C $repo push -q origin main
