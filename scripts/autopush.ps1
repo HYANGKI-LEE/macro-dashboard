@@ -1,4 +1,4 @@
-# Commits and pushes data/Macro.xlsx when it has changed, after pulling any GitHub-side commits.
+# Commits and pushes data/Macro.xlsx (and the infomax DBs built from it) when it has changed, after pulling any GitHub-side commits.
 # Run every 10 minutes by Windows Task Scheduler (task: MacroDashboardAutoPush) via autopush.vbs.
 $ErrorActionPreference = 'Stop'
 $env:GIT_TERMINAL_PROMPT = '0'
@@ -21,10 +21,15 @@ try {
     try { $zip = New-Object IO.Compression.ZipArchive($fs); [void]$zip.GetEntry('xl/workbook.xml').Length; $zip.Dispose() }
     finally { $fs.Close() }
 
-    git -C $repo add -- data/Macro.xlsx
-    git -C $repo commit -q -m "Update data (auto)" -- data/Macro.xlsx
+    # The dashboard reads the infomax_*.db files, not the xlsx, so rebuild them from the Info sheets.
+    $dbs = @('data/infomax_daily.db', 'data/infomax_monthly.db', 'data/infomax_quarterly.db')
+    python (Join-Path $repo 'scripts\excel\build_infomax_db.py') | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "build_infomax_db.py failed" }
+
+    git -C $repo add -- data/Macro.xlsx @dbs
+    git -C $repo commit -q -m "Update data (auto)" -- data/Macro.xlsx @dbs
     if ($LASTEXITCODE -ne 0) { throw "git commit failed" }
-    Log 'committed data/Macro.xlsx'
+    Log 'committed data/Macro.xlsx + infomax DBs'
   }
 
   # Push any local commits not yet on GitHub (also retries a push that failed last time).

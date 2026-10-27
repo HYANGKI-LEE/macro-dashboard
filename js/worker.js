@@ -1,48 +1,30 @@
-// 엑셀 파싱은 무거워서 화면이 멈추지 않도록 워커에서 처리한다.
-// Info 시트만 읽고, Main 시트(차트·작업용)는 건드리지 않는다.
-importScripts('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js');
+// SQLite DB(data/*.db)를 받아 market 테이블을 표로 바꾼다. 무거운 작업이라 화면이 멈추지 않도록 워커에서 처리한다.
+// DB 구조: market(date TEXT 'YYYY-MM-DD', <칼럼> REAL, ...) — scripts/fred/build_fred_db.py, scripts/excel/build_infomax_db.py 참고
+const SQLJS = 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/';
+importScripts(`${SQLJS}sql-wasm.js`);
+const ready = initSqlJs({ locateFile: (f) => SQLJS + f });
 
-const SHEETS = { daily: 'Info(일)', monthly: 'Info(월)', quarterly: 'Info(분기)' };
-
-// Info 시트 구조: 2행 = 지표명, 3행 = 필드명, 4행~ = A열 날짜(엑셀 serial) + 값.
-// B열 지표명은 A2에 들어 있다(B2는 단위 표기).
-function readSheet(ws, { skipWeekends }) {
-  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null, blankrows: false });
-  const head = rows[1] || [];
-  const names = head.map((h, i) => (i === 1 ? head[0] : h));
-  const dates = [];
-  const cols = {};
-  const keep = [];
-  names.forEach((n, i) => {
-    if (i > 0 && typeof n === 'string' && n.trim()) { cols[n.trim()] = []; keep.push([i, n.trim()]); }
-  });
-  for (let r = 3; r < rows.length; r++) {
-    const row = rows[r];
-    const serial = row[0];
-    if (typeof serial !== 'number') continue;
-    const t = Math.round((serial - 25569) * 864e5);
-    if (skipWeekends) { const d = new Date(t).getUTCDay(); if (d === 0 || d === 6) continue; }
-    dates.push(t);
-    for (const [i, n] of keep) { const v = row[i]; cols[n].push(typeof v === 'number' ? v : null); }
-  }
-  return { dates, cols };
-}
-
+// 요청: { name, url } → 응답: { ok, name, table: { dates: [epoch ms], cols: { 칼럼: [값|null] } } }
 onmessage = async (e) => {
+  const { name, url } = e.data;
   try {
-    const res = await fetch(e.data.url, { cache: 'no-cache' });
-    if (!res.ok) throw new Error(`엑셀 파일을 받지 못했어요 (HTTP ${res.status})`);
-    const wb = XLSX.read(await res.arrayBuffer(), { type: 'array', sheets: Object.values(SHEETS), dense: true });
-    for (const name of Object.values(SHEETS)) {
-      if (!wb.Sheets[name]) throw new Error(`'${name}' 시트를 찾지 못했어요`);
+    const [SQL, res] = await Promise.all([ready, fetch(url, { cache: 'no-cache' })]);
+    if (!res.ok) throw new Error(`${name}.db 를 받지 못했어요 (HTTP ${res.status})`);
+    const db = new SQL.Database(new Uint8Array(await res.arrayBuffer()));
+    const [result] = db.exec('SELECT * FROM market ORDER BY date');
+    db.close();
+    const dates = [];
+    const cols = {};
+    if (result) {
+      const names = result.columns.slice(1);
+      names.forEach((n) => { cols[n] = []; });
+      for (const row of result.values) {
+        dates.push(Date.parse(`${row[0]}T00:00:00Z`));
+        names.forEach((n, i) => { cols[n].push(row[i + 1]); });
+      }
     }
-    postMessage({
-      ok: true,
-      daily: readSheet(wb.Sheets[SHEETS.daily], { skipWeekends: true }),
-      monthly: readSheet(wb.Sheets[SHEETS.monthly], { skipWeekends: false }),
-      quarterly: readSheet(wb.Sheets[SHEETS.quarterly], { skipWeekends: false }),
-    });
+    postMessage({ ok: true, name, table: { dates, cols } });
   } catch (err) {
-    postMessage({ ok: false, error: String(err.message || err) });
+    postMessage({ ok: false, name, error: String(err.message || err) });
   }
 };
