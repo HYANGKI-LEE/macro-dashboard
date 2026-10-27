@@ -15,6 +15,7 @@
   --s-cn: #e87ba4; --s-uk: #008300; --s-au: #4a3aa7; --s-ca: #e34948;
   /* 한 국가 안에서 만기를 구분하는 색 (범주형 1~3번) */
   --slot-1: #2a78d6; --slot-2: #eb6834; --slot-3: #1baf7a;
+  --slot-4: #eda100; --slot-5: #4a3aa7; --slot-6: #e87ba4; --slot-7: #008300;
   /* 기준금리 선 (항상 검정. 대시보드는 라이트 모드 고정) */
   --base-rate: #0b0b0b;
 }
@@ -80,6 +81,11 @@ h2 { font-size: 16px; margin: 32px 0 8px; }
 
 .chart-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; }
 .chart-grid .chart { height: 400px; }
+/* 3열 페이지(신용 등): 폭이 1/3이라 높이·제목을 줄인다 */
+.chart-grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 24px; }
+.chart-grid.cols-3 h2 { font-size: 14px; margin-top: 24px; }
+.chart-grid.cols-3 .chart { height: 320px; }
+@media (max-width: 1100px) { .chart-grid.cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 /* 옆 칸의 만기 버튼 줄만큼 높이를 맞춰 두 차트의 위치를 정렬 */
 .filters-spacer { min-height: 27px; }
 p.note { margin: 0 0 4px; min-height: 1em; color: var(--text-muted); font-size: 12px; }
@@ -128,6 +134,6 @@ p.note { margin: 0 0 4px; min-height: 1em; color: var(--text-muted); font-size: 
   .sidebar nav a { margin: 0; white-space: nowrap; }
   main { padding: 16px 16px 40px; }
   .chart, .chart-grid .chart { height: 360px; }
-  .chart-grid { grid-template-columns: 1fr; }
+  .chart-grid, .chart-grid.cols-3 { grid-template-columns: 1fr; }
   .filters-spacer { display: none; }
 }

@@ -8,7 +8,7 @@
 
 - 주기별로 나누는 이유: 주기가 섞이면 일별 날짜 행마다 월·분기 칼럼이 빈칸으로 붙어 파일이 커지고,
   매일 바뀌는 건 일별 DB뿐이라 git에 다시 올라가는 양도 줄어든다.
-- 티커 목록은 mySeriesIds/us_macro.py (HYANGKI-LEE/fred 에서 복사)의 ids_* 리스트 전체. 중복 티커는 한 칼럼.
+- 티커 목록은 mySeriesIds/us_macro.py (HYANGKI-LEE/fred 에서 복사)와 dashboard_extra.py 의 ids_* 리스트 전체. 중복 티커는 한 칼럼.
 - 증분 업데이트: FRED 값이 있는 칸만 덮어쓴다(수정치 반영). 없는 날짜는 행을 추가한다.
 - us_macro.py에서 빠진 티커는 --drop-missing 을 줄 때만 DB에서 삭제한다.
 - 실패한 티커는 건너뛰고 마지막에 목록을 출력한다(기존 DB 값은 유지).
@@ -29,7 +29,7 @@ sys.path.insert(0, HERE)
 
 from fred_getter import getObservations, getSeriesInfo  # noqa: E402
 
-LIST_FILE = os.path.join(HERE, 'mySeriesIds', 'us_macro.py')
+LIST_FILES = [os.path.join(HERE, 'mySeriesIds', f) for f in ('us_macro.py', 'dashboard_extra.py')]
 DATA_DIR = os.path.join(ROOT, 'data')
 # FRED frequency_short → DB 이름. 목록에 없는 주기(연간 등)는 fred_other.db
 FREQ_DB = {'D': 'daily', 'W': 'weekly', 'BW': 'weekly', 'M': 'monthly', 'Q': 'quarterly'}
@@ -47,9 +47,10 @@ def load_env():
 
 
 def read_tickers():
-    """us_macro.py 를 위에서부터 읽어 [(티커, 리스트명, 섹션 주석)] 반환 (주석 처리된 티커는 제외)."""
+    """티커 목록 파일들을 위에서부터 읽어 [(티커, 리스트명, 섹션 주석)] 반환 (주석 처리된 티커는 제외)."""
     out, seen, group, section = [], {}, None, ''
-    for line in open(LIST_FILE, encoding='utf-8'):
+    lines = [line for f in LIST_FILES for line in open(f, encoding='utf-8')]
+    for line in lines:
         s = line.strip()
         m = re.match(r'^(ids_\w+)\s*=\s*\[', s)
         if m:
