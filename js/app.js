@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261027c';
+const VERSION = '20261027d';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -775,8 +775,11 @@ function updatedText(page) {
   const last = {};
   eachSeries(page, ({ dates, vals }, freq, def) => {
     if (def.shiftYears) return; // 앞으로 옮긴 선행 지표는 기준일에서 뺀다
+    // 일별 값을 월·분기로 묶으면 아직 끝나지 않은 달·분기가 들어올 수 있어 기준일에서 뺀다
+    const months = { monthly: 1, quarterly: 3 }[freq];
+    const done = (t) => { const d = new Date(t); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + months, 1) <= Date.now(); };
     for (let i = vals.length - 1; i >= 0; i--) {
-      if (vals[i] !== null) { last[freq] = Math.max(last[freq] ?? -Infinity, dates[i]); break; }
+      if (vals[i] !== null && (!months || done(dates[i]))) { last[freq] = Math.max(last[freq] ?? -Infinity, dates[i]); break; }
     }
   });
   const parts = [['daily', '일별', ymd], ['weekly', '주별', ymd], ['monthly', '월별', ym], ['quarterly', '분기', quarterLabel]]
