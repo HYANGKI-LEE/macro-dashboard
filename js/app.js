@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261027b';
+const VERSION = '20261027c';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -21,7 +21,9 @@ const freqOf = (table) => table.split('_')[1];
 // hidden: 기본으로 숨김(범례 클릭으로 표시), step: 계단식 선, since: 이 연도부터만 사용,
 // monthly: 일별 값을 월별(그 달 마지막 값)로 바꿈, transform: 'diff' → 전기 대비 증감, 'yoy' → 전년동기비(%).
 // calc: 여러 칼럼을 분기 단위로 맞춰 계산 { inputs: [Q(칼럼, DB, 'last'|'mean')], fn: (a, b, ...) => 값 },
-// shiftYears: 날짜를 N년 뒤로 옮김(선행 지표), right: 오른쪽 축(차트의 unit2).
+// shiftYears: 날짜를 N년 뒤로 옮김(선행 지표), right: 오른쪽 축(차트의 unit2),
+// indexTo: 'YYYY-MM-DD' 그 날짜 값을 100으로 한 지수.
+// 차트 compare: { base: 'YYYY-MM-DD' } → 시리즈(defs)를 항목으로, 기준 분기와 최근 분기 값을 막대로 비교.
 const POLICY = [
   { key: 'kr', label: '한국', prefix: '한국:기준금리' },
   { key: 'us', label: '미국(상단)', prefix: '미국:기준금리 상단' },
@@ -164,7 +166,7 @@ const PAGES = {
     group: 'us',
     title: '신용',
     desc: 'FRED 분기 데이터 기준 (엑셀 Main(분기) 신용 차트). 기준금리는 실효 연방기금금리 분기 평균(오른쪽 축). '
-      + 'HY 스프레드·수익률과 주요 상업은행(Citi·JPM 등) 카드 데이터는 아직 DB에 없어 뺐어요.',
+      + 'HY 스프레드·수익률과 주요 상업은행(Citi·JPM 등) 카드 데이터는 아직 DB에 없어 뺐어요. GDP·투자 차트는 제외.',
     cols: 3,
     defaultPeriod: 's2000',
     charts: [
@@ -173,6 +175,10 @@ const PAGES = {
         { color: '--slot-1', label: '대·중견기업', exact: 'DRTSCILM' },
         { color: '--slot-2', label: '소기업', exact: 'DRTSCIS' },
         FFR_Q,
+      ] },
+      { id: 'cr-sloos-ci2', title: 'SLOOS 대출기준 강화: C&I (금리 제외)', table: FRED_Q, unit: '%p', digits: 1, defs: [
+        { color: '--slot-1', label: '대·중견기업', exact: 'DRTSCILM' },
+        { color: '--slot-2', label: '소기업', exact: 'DRTSCIS' },
       ] },
       { id: 'cr-sloos-mix', title: 'SLOOS 대출기준 강화: 기업·소비자', table: FRED_Q, unit: '%p', digits: 1, defs: [
         { color: '--slot-1', label: 'C&I 대·중견', exact: 'DRTSCILM' },
@@ -201,6 +207,11 @@ const PAGES = {
         { color: '--slot-3', label: '신용카드', exact: 'DRCCLACBS' },
         FFR_Q,
       ] },
+      { id: 'cr-dq-bizcard', title: '연체율: 기업·카드 · 기준금리', table: FRED_Q, unit: '%', unit2: '%', defs: [
+        { color: '--slot-1', label: '기업대출', exact: 'DRBLACBS' },
+        { color: '--slot-3', label: '신용카드', exact: 'DRCCLACBS' },
+        FFR_Q,
+      ], note: '엑셀의 HY 스프레드 선은 DB에 없어 뺐어요.' },
       { id: 'cr-dq-mortgage', title: '연체율: 주택담보대출', table: FRED_Q, unit: '%', unit2: '%', defs: [
         { color: '--slot-1', label: '모기지', exact: 'DRSFRMACBS' },
         FFR_Q,
@@ -259,6 +270,65 @@ const PAGES = {
       { id: 'cr-dsr', title: '가계 부채상환 부담 / 가처분소득', table: FRED_Q, unit: '%', defs: [
         { color: '--slot-1', label: '모기지', exact: 'MDSP' },
         { color: '--slot-2', label: '소비자 부채', exact: 'CDSP' },
+      ] },
+      { id: 'cr-debt-equity', title: '비금융기업 부채/자기자본', table: FRED_Q, unit: '%', digits: 1, defs: [
+        { color: '--slot-1', label: '부채/자기자본(시가)', exact: 'NCBCMDPMVCE' },
+      ], note: '엑셀의 US HY 수익률·WAM 선은 DB에 없어 뺐어요.' },
+      // --- 가계 재무 ---
+      { id: 'hh-assets', title: '가계 자산 구성 (총자산 대비)', table: FRED_Q, unit: '%', digits: 1, defs: [
+        { color: '--slot-1', label: '부동산', calc: { inputs: [Q('HOOREVLMHMV'), Q('BOGZ1FL192000005Q')], fn: (a, t) => a / t * 100 } },
+        { color: '--slot-2', label: '예금', calc: { inputs: [Q('BOGZ1FL193020005Q'), Q('BOGZ1FL193030205Q'), Q('BOGZ1FL193034005Q'), Q('BOGZ1FL192000005Q')], fn: (a, b, c, t) => (a + b + c) / t * 100 } },
+        { color: '--slot-3', label: '채권', calc: { inputs: [Q('BOGZ1LM194022005Q'), Q('BOGZ1FL192000005Q')], fn: (a, t) => a / t * 100 } },
+        { color: '--slot-4', label: '주식', calc: { inputs: [Q('BOGZ1LM193064005Q'), Q('BOGZ1FL192000005Q')], fn: (a, t) => a / t * 100 } },
+      ], note: '예금 = 요구불·현금 + 저축성 예금 + MMF' },
+      { id: 'hh-cash-wage', title: '가계 현금성 자산 · 임금 상승률', table: FRED_Q, unit: '십억 달러', unit2: '%', digits: 0, defs: [
+        { color: '--slot-1', label: '요구불예금·현금', calc: { inputs: [Q('BOGZ1FL193020005Q')], fn: (a) => a / 1000 } },
+        { color: '--slot-2', label: 'Wage Tracker(우)', right: true, calc: { inputs: [Q('FRBATLWGT3MMAUMHWGO', FRED_M)], fn: (a) => a } },
+      ] },
+      { id: 'hh-networth', title: '가계 순자산 / 가처분소득', table: FRED_Q, unit: '배', digits: 2, defs: [
+        { color: '--slot-1', label: '순자산/가처분소득', calc: { inputs: [Q('BOGZ1FL192090005Q'), Q('DPI')], fn: (n, d) => n / (d * 1000) } },
+      ] },
+      { id: 'hh-networth-saving', title: '가계 순자산/소득 · 저축률', table: FRED_Q, unit: '배', unit2: '%', digits: 2, defs: [
+        { color: '--slot-1', label: '순자산/가처분소득', calc: { inputs: [Q('BOGZ1FL192090005Q'), Q('DPI')], fn: (n, d) => n / (d * 1000) } },
+        { color: '--slot-2', label: '저축률(우)', exact: 'A072RC1Q156SBEA', right: true },
+      ] },
+      // --- 자산 분포 ---
+      { id: 'dist-share', title: '자산 그룹별 총자산 비중', table: FRED_Q, unit: '%', digits: 1, defs: [
+        { color: '--slot-1', label: '상위 1%', exact: 'WFRBST01108' },
+        { color: '--slot-2', label: '상위 1~10%', exact: 'WFRBSN09135' },
+        { color: '--slot-3', label: '상위 10~50%', exact: 'WFRBSN40162' },
+        { color: '--slot-4', label: '하위 50%', exact: 'WFRBSB50189' },
+      ] },
+      { id: 'dist-share-change', title: '총자산 비중 변동: 2010.2Q vs 최근', table: FRED_Q, unit: '%', digits: 1, compare: { base: '2010-04-01' }, defs: [
+        { label: '상위 1%', exact: 'WFRBST01108' },
+        { label: '상위 1~10%', exact: 'WFRBSN09135' },
+        { label: '상위 10~50%', exact: 'WFRBSN40162' },
+        { label: '하위 50%', exact: 'WFRBSB50189' },
+      ], note: '엑셀은 2025.2Q 고정, 여기선 최근 분기와 비교해요.' },
+      { id: 'dist-fin-assets', title: '그룹별 금융자산 추이 (2020.1Q=100)', table: FRED_Q, unit: '', digits: 1, defs: [
+        { color: '--slot-1', label: '상위 1%', exact: 'WFRBLT01004', indexTo: '2020-01-01' },
+        { color: '--slot-2', label: '상위 1~10%', exact: 'WFRBLN09031', indexTo: '2020-01-01' },
+        { color: '--slot-3', label: '상위 10~50%', exact: 'WFRBLN40058', indexTo: '2020-01-01' },
+        { color: '--slot-4', label: '하위 50%', exact: 'WFRBLB50085', indexTo: '2020-01-01' },
+      ] },
+      // --- 기타 ---
+      { id: 'etc-wage-q', title: '분위별 주간 임금 상승률 (YoY)', table: FRED_Q, unit: '%', digits: 1, defs: [
+        { color: '--slot-1', label: '1분위', exact: 'LEU0252916100Q', transform: 'yoy' },
+        { color: '--slot-2', label: '2분위(중위)', exact: 'LEU0252887700Q', transform: 'yoy' },
+        { color: '--slot-3', label: '3분위', exact: 'LEU0252916200Q', transform: 'yoy' },
+        { color: '--slot-4', label: '상위 10%', exact: 'LEU0252916300Q', transform: 'yoy' },
+      ] },
+      { id: 'etc-capex-index', title: 'CapEx · 소매판매 · 고용 (2021.1Q=100)', table: FRED_Q, unit: '', digits: 1, defs: [
+        { color: '--slot-1', label: '비금융기업 CapEx', calc: { inputs: [Q('BOGZ1FA105050005Q')], fn: (a) => a }, indexTo: '2021-01-01' },
+        { color: '--slot-2', label: '소매판매', calc: { inputs: [Q('RSAFS', FRED_M)], fn: (a) => a }, indexTo: '2021-01-01' },
+        { color: '--slot-3', label: '비농업 고용', calc: { inputs: [Q('PAYEMS', FRED_M)], fn: (a) => a }, indexTo: '2021-01-01' },
+      ], note: '소매판매·고용은 분기 마지막 달 값' },
+      { id: 'etc-m2-spx', title: 'M2 · S&P500', table: FRED_Q, unit: '십억 달러', unit2: 'pt', digits: 0, defs: [
+        { color: '--slot-1', label: 'M2', calc: { inputs: [Q('M2SL', FRED_M)], fn: (a) => a } },
+        { color: '--slot-2', label: 'S&P500(우)', right: true, calc: { inputs: [Q('SP500', FRED_D)], fn: (a) => a } },
+      ], note: 'FRED S&P500은 최근 10년치만 제공돼요. 분기 마지막 값' },
+      { id: 'etc-pce', title: '명목 PCE 증가율 (YoY)', table: FRED_Q, unit: '%', digits: 1, defs: [
+        { color: '--slot-1', label: 'PCE', exact: 'PCEC', transform: 'yoy' },
       ] },
     ],
   },
@@ -320,10 +390,18 @@ function shiftYears({ dates, vals }, n) {
   return { dates: dates.map((t) => { const d = new Date(t); return Date.UTC(d.getUTCFullYear() + n, d.getUTCMonth(), d.getUTCDate()); }), vals };
 }
 
+function indexTo({ dates, vals }, day) {
+  const i = dates.indexOf(Date.parse(`${day}T00:00:00Z`));
+  const base = i >= 0 ? vals[i] : null;
+  return { dates, vals: vals.map((v) => (v !== null && base ? (v / base) * 100 : null)) };
+}
+
 function valuesOf(table, def) {
   if (def.calc) {
-    const v = calcValues(def);
-    return v && def.shiftYears ? shiftYears(v, def.shiftYears) : v;
+    let v = calcValues(def);
+    if (v && def.shiftYears) v = shiftYears(v, def.shiftYears);
+    if (v && def.indexTo) v = indexTo(v, def.indexTo);
+    return v;
   }
   if (!table) return null;
   let vals = findCol(table.cols, def);
@@ -355,7 +433,7 @@ function valuesOf(table, def) {
       return v !== null && prev ? (v / prev - 1) * 100 : null;
     });
   }
-  return { dates, vals };
+  return def.indexTo ? indexTo({ dates, vals }, def.indexTo) : { dates, vals };
 }
 
 // 기간: 연도 하나(1.1~12.31), 'N년 이후', MAX(전체)
@@ -486,15 +564,49 @@ function chartOption(spec, built, period) {
   };
 }
 
+// compare 차트: 항목(defs)별로 기준 분기와 최근 분기(모든 항목에 값이 있는 마지막 분기) 값을 막대로 비교. 기간 버튼과 무관.
+function compareOption(spec) {
+  const vs = defsOf(spec).map((def) => valuesOf(state.data[tableOf(spec, def)], def));
+  if (vs.some((v) => !v)) return null;
+  const at = vs.map((v) => new Map(v.dates.map((t, i) => [t, v.vals[i]])));
+  const common = vs[0].dates.filter((t) => at.every((m) => m.get(t) !== null && m.get(t) !== undefined));
+  const base = Date.parse(`${spec.compare.base}T00:00:00Z`);
+  const last = common[common.length - 1];
+  const muted = css('--text-muted');
+  const grid = css('--grid');
+  const digits = spec.digits ?? 1;
+  const bar = (t, color) => ({
+    name: quarterLabel(t), type: 'bar', color, barMaxWidth: 28,
+    data: at.map((m) => m.get(t) ?? null),
+    label: { show: true, position: 'top', color: muted, fontSize: 11, formatter: (p) => p.value?.toFixed(digits) },
+  });
+  return {
+    animation: false,
+    textStyle: { fontFamily: 'Pretendard, "Malgun Gothic", sans-serif', color: css('--text-primary') },
+    grid: { left: 56, right: 16, top: 56, bottom: 32 },
+    legend: { top: 0, left: 0, textStyle: { color: css('--text-primary') }, icon: 'roundRect', itemWidth: 14, itemHeight: 4 },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: css('--surface-1'), borderColor: grid, valueFormatter: (v) => `${v?.toFixed(digits)}${spec.unit === '%' ? '%' : ` ${spec.unit}`}` },
+    xAxis: { type: 'category', data: defsOf(spec).map((d) => d.label), axisLine: { lineStyle: { color: grid } }, axisLabel: { color: muted } },
+    yAxis: { type: 'value', name: spec.unit, nameTextStyle: { color: muted, align: 'left' }, axisLabel: { color: muted }, splitLine: { lineStyle: { color: grid } } },
+    series: [bar(base, css('--other-series')), bar(last, css('--slot-1'))],
+  };
+}
+
 function drawChart(spec) {
   const page = Object.keys(PAGES).find((p) => PAGES[p].charts.includes(spec));
   const period = state.period[page];
-  const built = buildSeries(spec, period);
 
   if (!charts[spec.id]) {
     charts[spec.id] = echarts.init(document.getElementById(spec.id));
     charts[spec.id].on('legendselectchanged', (e) => { state.legend[spec.id] = e.selected; });
   }
+  if (spec.compare) {
+    const option = compareOption(spec);
+    if (option) charts[spec.id].setOption(option, { notMerge: true });
+    document.getElementById(`note-${spec.id}`).textContent = option ? (spec.note || '') : '데이터 없음';
+    return;
+  }
+  const built = buildSeries(spec, period);
   charts[spec.id].setOption(chartOption(spec, built, period), { notMerge: true });
 
   const empty = built.series.filter((s) => !s.data.length).map((s) => s.def.label);

@@ -16,4 +16,31 @@ ids_extra = [
 
     # Yield curve
     'T10Y2Y', # 10-Year Treasury Constant Maturity Minus 2-Year Treasury Constant Maturity
+
+    # Wage - Usual weekly earnings by quartile (Main(분기) L~O)
+    'LEU0252916100Q', # Employed full time: Median usual weekly nominal earnings: 1st quartile
+    'LEU0252887700Q', # Employed full time: Median usual weekly nominal earnings
+    'LEU0252916200Q', # Employed full time: Median usual weekly nominal earnings: 3rd quartile
+    'LEU0252916300Q', # Employed full time: Median usual weekly nominal earnings: 9th decile
+
+    # Household balance sheet
+    'HOOREVLMHMV', # Households; Owner-Occupied Real Estate including Vacant Land and Mobile Homes at Market Value
+    'BOGZ1FL193030205Q', # Households; Time and Savings Deposits; Asset, Level
+    'BOGZ1FL192090005Q', # Households; Net Worth, Level
+    'DPI', # Disposable Personal Income
+    'A072RC1Q156SBEA', # Personal Saving Rate
+
+    # Distributional Financial Accounts - share of total assets / level of financial assets
+    'WFRBST01108', # Share of Total Assets Held by the Top 1%
+    'WFRBSN09135', # Share of Total Assets Held by the 90th to 99th Wealth Percentiles
+    'WFRBSN40162', # Share of Total Assets Held by the 50th to 90th Wealth Percentiles
+    'WFRBSB50189', # Share of Total Assets Held by the Bottom 50%
+    'WFRBLT01004', # Financial Assets Held by the Top 1%
+    'WFRBLN09031', # Financial Assets Held by the 90th to 99th Wealth Percentiles
+    'WFRBLN40058', # Financial Assets Held by the 50th to 90th Wealth Percentiles
+    'WFRBLB50085', # Financial Assets Held by the Bottom 50%
+
+    # Money & equity (엑셀은 블룸버그 M2 Index, SPX)
+    'M2SL', # M2
+    'SP500', # S&P 500 (FRED는 최근 10년만 제공)
 ]
