@@ -9,3 +9,10 @@ desktop.ini
 
 # 자동 push 로그
 scripts/autopush.log
+
+# 로컬 비밀값 / 전체 DB(로컬 전용)
+.env
+data/macro.db
+data/*.db.tmp
+__pycache__/
+scripts/fred/build_fred_db.log
