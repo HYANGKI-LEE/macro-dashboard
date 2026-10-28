@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261028i';
+const VERSION = '20261028j';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -37,6 +37,7 @@ const freqOf = (table) => table.split('_')[1];
 // calc: 여러 칼럼을 분기 단위로 맞춰 계산 { inputs: [Q(칼럼, DB, 'last'|'mean')], fn: (a, b, ...) => 값 },
 // shiftYears: 날짜를 N년 뒤로 옮김(선행 지표), right: 오른쪽 축(차트의 unit2),
 // indexTo: 'YYYY-MM-DD' 그 날짜 값을 100으로 한 지수.
+// minus: 같은 DB의 다른 칼럼을 같은 가공(transform 등)을 거쳐 뺌 (예: 수주 YoY − 재고 YoY 갭, %p).
 // 차트 compare: { base: 'YYYY-MM-DD' } → 시리즈(defs)를 항목으로, 기준 분기와 최근 분기 값을 막대로 비교.
 const POLICY = [
   { key: 'kr', label: '한국', prefix: '한국:기준금리' },
@@ -429,6 +430,35 @@ const PAGES = {
         { color: '--slot-4', label: '1차 금속', exact: 'A31SNO', transform: 'yoy' },
         { color: '--slot-5', label: '금속가공', exact: 'A32SNO', transform: 'yoy' },
       ] },
+      // 재고·수주잔고·선행 지표 (Census M3 Table 3·4·5·6·7)
+      { sub: 'manufacturing', id: 'dg-is', title: '재고 / 출하 비율', table: MFG_M, unit: '개월', digits: 2, defs: [
+        { color: '--slot-1', label: '제조업 전체', exact: 'AMTMIS' },
+        { color: '--slot-2', label: '내구재', exact: 'AMDMIS' },
+        { color: '--slot-3', label: '비내구재', exact: 'AMNMIS' },
+      ], note: '월 출하액 대비 재고가 몇 개월치인지. 오르면 수요 둔화로 재고가 쌓이는 신호' },
+      { sub: 'manufacturing', id: 'dg-uo', title: '수주잔고 전년비', table: MFG_M, unit: '%', digits: 1, defs: [
+        { color: '--slot-1', label: '내구재', exact: 'AMDMUO', transform: 'yoy' },
+        { color: '--slot-2', label: '근원 자본재', exact: 'ANXAUO', transform: 'yoy' },
+        { color: '--slot-3', label: '민간 항공기', exact: 'ANAPUO', transform: 'yoy' },
+      ], note: '앞으로 생산할 일감. 늘면 생산 둔화를 막아주고, 줄면 경기 둔화 신호' },
+      { sub: 'manufacturing', id: 'dg-us', title: '수주잔고 / 출하 비율', table: MFG_M, unit: '개월', digits: 2, defs: [
+        { color: '--slot-1', label: '제조업 전체', exact: 'AMTMUS' },
+        { color: '--slot-2', label: '내구재', exact: 'AMDMUS' },
+      ], note: '쌓인 주문이 월 출하액의 몇 개월치인지' },
+      { sub: 'manufacturing', id: 'dg-gap', title: '신규 수주 − 재고 증가율 (YoY)', table: MFG_M, unit: '%p', digits: 1, defs: [
+        { color: '--slot-1', label: '제조업 전체', exact: 'AMTMNO', minus: 'AMTMTI', transform: 'yoy' },
+        { color: '--slot-2', label: '내구재', exact: 'DGORDER', minus: 'AMDMTI', transform: 'yoy' },
+      ], note: 'ISM 신규주문−재고와 같은 발상. 0보다 크면 주문이 재고보다 빨리 늘어 생산 증가 선행' },
+      { sub: 'manufacturing', id: 'dg-theme', title: '소비재 · IT 수주 전년비', table: MFG_M, unit: '%', digits: 1, defs: [
+        { color: '--slot-1', label: '소비재', exact: 'ACOGNO', transform: 'yoy' },
+        { color: '--slot-2', label: '소비 내구재', exact: 'ACDGNO', transform: 'yoy' },
+        { color: '--slot-3', label: 'IT 산업', exact: 'AITINO', transform: 'yoy' },
+      ], note: 'IT 산업 수주는 반도체 제외' },
+      { sub: 'manufacturing', id: 'dg-stage', title: '가공단계별 재고 전년비 (제조업 전체)', table: MFG_M, unit: '%', digits: 1, defs: [
+        { color: '--slot-1', label: '원자재', exact: 'AMTMMI', transform: 'yoy' },
+        { color: '--slot-2', label: '재공품', exact: 'AMTMWI', transform: 'yoy' },
+        { color: '--slot-3', label: '완제품', exact: 'AMTMFI', transform: 'yoy' },
+      ], note: '재고가 어느 단계에 쌓이는지. 완제품 재고가 빠르게 늘면 판매 부진 신호' },
     ],
     panels: [
       { sub: 'manufacturing', id: 'm3-table2', title: '업종별 신규 수주 변동률 (Census M3 Table 2, 계절조정)', table: MFG_M,
@@ -456,6 +486,7 @@ function fredTicker(spec, def) {
   if (def.calc) return def.calc.inputs.filter((i) => isFred(i.table)).map((i) => i.col).join(', ');
   if (!isFred(tableOf(spec, def))) return '';
   if (def.splice) return def.splice.join('→');
+  if (def.minus) return `${def.exact}−${def.minus}`;
   return def.div ? `${def.exact}/${def.div}` : def.exact || '';
 }
 
@@ -554,6 +585,12 @@ function valuesOf(table, def) {
       const prev = at.get(Date.UTC(d.getUTCFullYear() - 1, d.getUTCMonth(), d.getUTCDate()));
       return v !== null && prev ? (v / prev - 1) * 100 : null;
     });
+  }
+  if (def.minus) {
+    const other = valuesOf(table, { ...def, exact: def.minus, minus: undefined, indexTo: undefined });
+    if (!other) return null;
+    const at = new Map(other.dates.map((t, i) => [t, other.vals[i]]));
+    vals = vals.map((v, i) => { const w = at.get(dates[i]); return v !== null && w != null ? v - w : null; });
   }
   return def.indexTo ? indexTo({ dates, vals }, def.indexTo) : { dates, vals };
 }
@@ -916,7 +953,7 @@ function seriesFor(table) {
     for (const spec of cfg.charts) {
       for (const def of allDefs(spec)) {
         if (def.calc) def.calc.inputs.filter((i) => i.table === table).forEach((i) => out.add(i.col));
-        else if (tableOf(spec, def) === table) [def.exact, def.div, ...(def.splice || [])].filter(Boolean).forEach((c) => out.add(c));
+        else if (tableOf(spec, def) === table) [def.exact, def.div, def.minus, ...(def.splice || [])].filter(Boolean).forEach((c) => out.add(c));
       }
     }
     (cfg.panels || []).filter((p) => p.table === table).forEach((p) => p.rows.forEach(([t]) => out.add(t)));
