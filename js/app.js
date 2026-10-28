@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261028d';
+const VERSION = '20261028e';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -69,7 +69,9 @@ const FFR_Q = { color: '--base-rate', label: '기준금리(우)', table: FRED_Q,
 const Q = (col, table = FRED_Q, agg = 'last') => ({ col, table, agg });
 
 // Census M3 Table 2 (Value of Manufacturers' New Orders for Industry Groups) 행 순서. [티커(SA), 이름, 원문, 들여쓰기]
+// 맨 위 근원 자본재 수주는 Table 2에 없는 참고 행 (용도별 분류, 시장이 가장 주목하는 설비투자 선행지표)
 const TABLE2 = [
+  ['NEWORDER', '근원 자본재 수주 (참고)', 'Nondefense capital goods excluding aircraft (core capital goods) - Table 2 외 참고 행', 0],
   ['AMTMNO', '제조업 전체', 'All manufacturing industries', 0],
   ['AMXTNO', '운송장비 제외', 'Excluding transportation', 1],
   ['AMXDNO', '국방 제외', 'Excluding defense', 1],
@@ -452,6 +454,14 @@ const ym = (t) => new Date(t).toISOString().slice(0, 7);
 const quarterLabel = (t) => { const d = new Date(t); return `${d.getUTCFullYear()}.${Math.floor(d.getUTCMonth() / 3) + 1}Q`; };
 const defsOf = (spec) => (typeof spec.defs === 'function' ? spec.defs() : spec.defs);
 const tableOf = (spec, def) => def.table || spec.table;
+// 툴팁에 붙일 FRED 티커 (FRED 데이터일 때만. 인포맥스는 빈 문자열)
+const isFred = (table) => table.startsWith('fred_') || !!LONG_DB[table];
+function fredTicker(spec, def) {
+  if (def.calc) return def.calc.inputs.filter((i) => isFred(i.table)).map((i) => i.col).join(', ');
+  if (!isFred(tableOf(spec, def))) return '';
+  if (def.splice) return def.splice.join('→');
+  return def.div ? `${def.exact}/${def.div}` : def.exact || '';
+}
 
 function findCol(cols, def) {
   if (def.splice) {
@@ -642,7 +652,12 @@ function chartOption(spec, built, period) {
         const rows = ps
           .filter((p) => p.value && p.value[1] !== null)
           .sort((a, b) => b.value[1] - a.value[1])
-          .map((p) => `<div style="display:flex;gap:12px;justify-content:space-between"><span>${p.marker}${p.seriesName}</span><b>${fmt(p.value[1])}${suffix(unitOf(built.series[p.seriesIndex].def))}</b></div>`);
+          .map((p) => {
+            const { def } = built.series[p.seriesIndex];
+            const ticker = fredTicker(spec, def);
+            const tag = ticker ? ` <span style="color:${muted};font-size:11px">${ticker}</span>` : '';
+            return `<div style="display:flex;gap:12px;justify-content:space-between"><span>${p.marker}${p.seriesName}${tag}</span><b>${fmt(p.value[1])}${suffix(unitOf(def))}</b></div>`;
+          });
         return `<div style="margin-bottom:4px;color:${muted}">${head(ps[0].axisValue)}</div>${rows.join('')}`;
       },
     },
