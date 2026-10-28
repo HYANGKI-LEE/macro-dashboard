@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261028o';
+const VERSION = '20261028p';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -14,10 +14,11 @@ const INFO_M = 'infomax_monthly';
 const INFO_Q = 'infomax_quarterly';
 //   mfg_*     : FRED 항목별 DB (HYANGKI-LEE/fred 의 build_db.py → output/db/*.db). 복사하지 않고 public 리포에서 바로 읽음
 //               세로형(series_id, date, value)이라 LONG_DB 로 주소·테이블을 지정. 칼럼 = FRED 티커
-//               raw.githubusercontent.com 은 5분 캐시라 fred 리포에 push 후 몇 분 뒤 반영
+//               DB는 fred 리포의 data 브랜치에 있음 (평일 07:00 KST GitHub Actions가 갱신, 이력 없이 덮어씀)
+//               raw.githubusercontent.com 은 5분 캐시라 갱신 후 몇 분 뒤 반영
 //               빠르게 받으려고 압축본(.db.gz, build_db.py가 자동 생성)을 받아 워커에서 풀고,
 //               페이지 설정(차트·패널)에 쓰인 티커만 꺼내 변환한다 (seriesFor)
-const FRED_REPO_DB = 'https://raw.githubusercontent.com/HYANGKI-LEE/fred/main/output/db/';
+const FRED_REPO_DB = 'https://raw.githubusercontent.com/HYANGKI-LEE/fred/data/output/db/';
 //   fin_*     : 같은 방식. Financial Indicators DB (S&P500 등. SP500 1990~2016은 인포맥스로 채운 값)
 //   nyfed_*   : 같은 방식. NY Fed 가계신용 보고서(HHDC) DB — fred 리포 nyfed_hhdc.py, 티커 = P<쪽>_<항목> (FRED 아님)
 const MFG_M = 'mfg_monthly';
@@ -34,7 +35,7 @@ const freqOf = (table) => table.split('_')[1];
 // 열 찾기: exact(칼럼명 완전 일치) 또는 prefix(칼럼명 시작 일치). splice: 여러 칼럼을 이어 붙임(뒤가 우선).
 // table: 이 시리즈만 다른 DB에서 가져올 때 (기본은 차트의 table).
 // 색: key → css의 --s-<key>(국가 색), color → css 토큰 직접 지정, other → 회색 선(dash로 구분).
-// hidden: 기본으로 숨김(범례 클릭으로 표시), step: 계단식 선, since: 이 연도부터만 사용,
+// hidden: 기본으로 숨김(범례 클릭으로 표시), step: 계단식 선, since: 이 연도부터만 사용, bar: 이 시리즈만 막대,
 // monthly: 일별 값을 월별(그 달 마지막 값)로 바꿈, transform: 'diff' → 전기 대비 증감, 'yoy' → 전년동기비(%), 'mom' → 전기비(%).
 // div: 같은 DB의 다른 칼럼으로 나눔(비율), scale: 값에 곱함(예: 0.001 → 백만 달러를 십억 달러로).
 // calc: 여러 칼럼을 분기 단위로 맞춰 계산 { inputs: [Q(칼럼, DB, 'last'|'mean')], fn: (a, b, ...) => 값 },
@@ -415,6 +416,16 @@ const PAGES = {
         { color: '--slot-5', label: 'HELOC', exact: 'P03_HE_REVOLVING', div: 'P03_TOTAL', scale: 100 },
         { color: '--slot-6', label: '기타', exact: 'P03_OTHER', div: 'P03_TOTAL', scale: 100 },
       ], note: '전체 가계부채 대비 비중. 모기지를 범례로 끄면 나머지가 잘 보여요' },
+      // 상품별: 분기 증감(막대, 왼쪽 십억 달러) + 잔액(선, 오른쪽 조 달러)
+      ...[['TOTAL', '전체'], ['MORTGAGE', '모기지'], ['HE_REVOLVING', 'HELOC'], ['AUTO_LOAN', '자동차'],
+        ['CREDIT_CARD', '신용카드'], ['STUDENT_LOAN', '학자금'], ['OTHER', '기타']].map(([code, name], i) => ({
+        sub: 'hhdc', heading: i === 0 ? '부채 잔액 : 상품별' : undefined, id: `hh-bal-${code.toLowerCase()}`,
+        title: `${name}: 증감 · 잔액`, table: HHDC_Q, unit: '십억 달러', unit2: '조 달러', digits: 1, defs: [
+          { color: '--slot-1', bar: true, label: '분기 증감(좌)', exact: `P03_${code}`, scale: 1000, transform: 'diff' },
+          { color: '--slot-2', label: '잔액(우)', exact: `P03_${code}`, right: true },
+        ],
+        note: i === 0 ? '데이터가 분기라 증감도 전분기 대비. 막대(왼쪽, 십억 달러) = 증감, 선(오른쪽, 조 달러) = 잔액' : undefined,
+      })),
       { sub: 'hhdc', heading: '연체잔액비중 : 연체 종류별', id: 'hh-dq90', title: '90일+ 연체 잔액 비중', table: HHDC_Q, unit: '%', digits: 2, defs: [
         { color: '--slot-1', label: '신용카드', exact: 'P12_CC' },
         { color: '--slot-2', label: '학자금', exact: 'P12_STUDENT_LOAN' },
@@ -746,7 +757,7 @@ function chartOption(spec, built, period) {
       yAxisIndex: def.right ? 1 : 0,
       emphasis: { focus: 'series' },
     };
-    if (spec.bar) return { ...base, type: 'bar', barMaxWidth: 12 };
+    if (spec.bar || def.bar) return { ...base, type: 'bar', barMaxWidth: 12 };
     return {
       ...base,
       type: 'line',
