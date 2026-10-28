@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261028a';
+const VERSION = '20261028b';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -61,6 +61,49 @@ const FED_UPPER = { ...BASE, label: '기준금리(상단)', table: FRED_D, splic
 const FFR_Q = { color: '--base-rate', label: '기준금리(우)', table: FRED_Q, exact: 'BOGZ1FL072052006Q', right: true };
 // calc 입력 칼럼 (기본: FRED 분기, 분기 마지막 값)
 const Q = (col, table = FRED_Q, agg = 'last') => ({ col, table, agg });
+
+// Census M3 Table 2 (Value of Manufacturers' New Orders for Industry Groups) 행 순서. [티커(SA), 이름, 원문, 들여쓰기]
+const TABLE2 = [
+  ['AMTMNO', '제조업 전체', 'All manufacturing industries', 0],
+  ['AMXTNO', '운송장비 제외', 'Excluding transportation', 1],
+  ['AMXDNO', '국방 제외', 'Excluding defense', 1],
+  ['AMTUNO', '수주잔고 보유 업종', 'With unfilled orders', 1],
+  ['DGORDER', '내구재', 'Durable goods industries', 0],
+  ['A31SNO', '1차 금속', 'Primary metals', 1],
+  ['A31ANO', '철강', 'Iron and steel mills', 2],
+  ['AANMNO', '알루미늄·비철금속', 'Aluminum and nonferrous metals', 2],
+  ['A31CNO', '주철 주조', 'Ferrous metal foundries', 2],
+  ['A32SNO', '금속가공', 'Fabricated metal products', 1],
+  ['A33SNO', '기계', 'Machinery', 1],
+  ['A33CNO', '건설기계', 'Construction machinery', 2],
+  ['A33DNO', '광업·유전·가스전 기계', 'Mining, oil field, and gas field machinery', 2],
+  ['A33ENO', '산업기계', 'Industrial machinery', 2],
+  ['A33GNO', '사진장비', 'Photographic equipment', 2],
+  ['A33HNO', '공조·냉동장비', 'Ventilation, heating, air-conditioning, and refrigeration equipment', 2],
+  ['A33INO', '금속가공기계', 'Metalworking machinery', 2],
+  ['ATGPNO', '터빈·발전기·동력전달장비', 'Turbines, generators, and other power transmission equipment', 2],
+  ['A33MNO', '운반·하역장비', 'Material handling equipment', 2],
+  ['A34SNO', '컴퓨터·전자', 'Computers and electronic products', 1],
+  ['A34ANO', '컴퓨터', 'Computers', 2],
+  ['A34DNO', '통신장비(비국방)', 'Nondefense communications equipment', 2],
+  ['A34ENO', '통신장비(국방)', 'Defense communications equipment', 2],
+  ['A34HNO', '전자부품', 'Electronic components', 2],
+  ['A34INO', '탐색·항법장비(비국방)', 'Nondefense search and navigation equipment', 2],
+  ['A34JNO', '탐색·항법장비(국방)', 'Defense search and navigation equipment', 2],
+  ['A34KNO', '전자의료·계측·제어기기', 'Electromedical, measuring, and control instruments', 2],
+  ['A35SNO', '전기장비·가전·부품', 'Electrical equipment, appliances, and components', 1],
+  ['A35ANO', '조명장비', 'Electric lighting equipment', 2],
+  ['A35BNO', '가전', 'Household appliances', 2],
+  ['A35CNO', '전기장비', 'Electrical equipment', 2],
+  ['A36SNO', '운송장비', 'Transportation equipment', 1],
+  ['ABTPNO', '자동차 차체·부품·트레일러', 'Motor vehicle bodies, parts, and trailers', 2],
+  ['ANAPNO', '항공기·부품(비국방)', 'Nondefense aircraft and parts', 2],
+  ['ADAPNO', '항공기·부품(국방)', 'Defense aircraft and parts', 2],
+  ['A36ZNO', '선박', 'Ships and boats', 2],
+  ['A37SNO', '가구', 'Furniture and related products', 1],
+  ['AMNMNO', '비내구재', 'Nondurable goods industries', 0],
+];
+const SLOTS = 7; // css --slot-1 ~ --slot-7
 
 // ===== 사이드바 묶음 · 페이지 · 차트 정의 =====
 // group: 사이드바 묶음. sub: 하위 탭이 있는 페이지에서 차트가 속한 탭. bar: 막대 차트. unit: 축/툴팁 단위.
@@ -334,6 +377,7 @@ const PAGES = {
     ],
   },
   // 기업/생산: 제조업 = Census M3 내구재 주문 (FRED 월별, 계절조정)
+  // panels: 차트 그리드 아래 전체 폭 블록 (MoM/YoY 버튼 + 선택 업종 추이 차트 + 변동률 표)
   business: {
     group: 'us',
     title: '기업/생산',
@@ -382,11 +426,17 @@ const PAGES = {
         { color: '--slot-3', label: '국방 항공기', exact: 'ADAPNO', scale: 0.001 },
       ], note: '민간 항공기 수주(보잉 등)가 헤드라인 변동의 주원인' },
     ],
+    panels: [
+      { sub: 'manufacturing', id: 'm3-table2', title: '업종별 신규 수주 변동률 (Census M3 Table 2, 계절조정)', table: FRED_M,
+        rows: TABLE2, selected: ['AMTMNO', 'DGORDER', 'AMNMNO'],
+        note: '표의 업종 행을 누르면 차트에 추가·제거돼요 (최대 7개). 업종명에 마우스를 올리면 Census 원문 이름이 보여요.' },
+    ],
   },
 };
 
 // ===== 상태 =====
-const state = { data: {}, page: 'rates', sub: { rates: 'main', business: 'manufacturing' }, period: {}, tenor: 10, legend: {}, ready: {} };
+// panel: 패널 id → { mode: 'mom'|'yoy', slots: Map(티커 → 색 번호) }
+const state = { data: {}, page: 'rates', sub: { rates: 'main', business: 'manufacturing' }, period: {}, tenor: 10, legend: {}, ready: {}, panel: {} };
 const charts = {};
 
 // ===== 유틸 =====
@@ -677,9 +727,74 @@ function drawChart(spec) {
   document.getElementById(`note-${spec.id}`).textContent = notes.join(' · ');
 }
 
+// ===== 패널: 업종별 변동률 표 + 선택 업종 추이 차트 =====
+function panelState(panel) {
+  if (!state.panel[panel.id]) state.panel[panel.id] = { mode: 'mom', slots: new Map(panel.selected.map((t, i) => [t, i + 1])) };
+  return state.panel[panel.id];
+}
+
+function toggleRow(panel, page, ticker) {
+  const { slots } = panelState(panel);
+  if (slots.has(ticker)) {
+    slots.delete(ticker);
+  } else {
+    const used = new Set(slots.values());
+    const free = Array.from({ length: SLOTS }, (_, i) => i + 1).find((n) => !used.has(n));
+    if (!free) return; // 최대 SLOTS개
+    slots.set(ticker, free);
+  }
+  drawPanel(panel, page);
+}
+
+function drawPanel(panel, page) {
+  const period = state.period[page];
+  const { mode, slots } = panelState(panel);
+  const table = state.data[panel.table];
+  const label = mode === 'yoy' ? '전년비' : '전월비';
+
+  // 차트: 선택한 업종 (표 순서대로)
+  const spec = {
+    id: `chart-${panel.id}`, table: panel.table, unit: '%', digits: 1,
+    defs: panel.rows.filter(([t]) => slots.has(t)).map(([t, name]) => ({ label: name, exact: t, transform: mode, color: `--slot-${slots.get(t)}` })),
+  };
+  if (!charts[spec.id]) {
+    charts[spec.id] = echarts.init(document.getElementById(spec.id));
+    charts[spec.id].on('legendselectchanged', (e) => { state.legend[spec.id] = e.selected; });
+  }
+  charts[spec.id].setOption(chartOption(spec, buildSeries(spec, period), period), { notMerge: true });
+
+  // 표: 행 = 업종, 열 = 기간 안의 월 (옛날 → 최신)
+  const rows = panel.rows.map((row) => {
+    const v = valuesOf(table, { exact: row[0], transform: mode });
+    return { row, at: new Map(v ? pointsInPeriod(v, period) : []) };
+  });
+  const months = [...new Set(rows.flatMap((r) => [...r.at.keys()]))].sort((a, b) => a - b);
+  const cell = (v) => (v === undefined ? '<td></td>' : `<td class="${v > 0 ? 'up' : v < 0 ? 'down' : ''}">${v.toFixed(1)}</td>`);
+  const html = `
+    <thead><tr><th class="name">업종 (${label}, %)</th>${months.map((t) => `<th>${ym(t).replace('-', '.')}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(({ row: [t, name, en, level], at }) => {
+      const slot = slots.get(t);
+      const chip = slot ? `<i class="chip" style="background:var(--slot-${slot})"></i>` : '<i class="chip"></i>';
+      return `<tr data-ticker="${t}" class="lv${level}${slot ? ' on' : ''}"><th class="name" title="${en} (${t})">${chip}${name}</th>${months.map((m) => cell(at.get(m))).join('')}</tr>`;
+    }).join('')}</tbody>`;
+  const el = document.getElementById(`table-${panel.id}`);
+  el.innerHTML = html;
+  el.querySelectorAll('tbody tr').forEach((tr) => { tr.onclick = () => toggleRow(panel, page, tr.dataset.ticker); });
+  const wrap = el.parentElement;
+  if (wrap.dataset.view !== `${period.key}/${mode}`) { // 기간·기준이 바뀌었을 때만 최신 월(오른쪽 끝)로 스크롤
+    wrap.scrollLeft = wrap.scrollWidth;
+    wrap.dataset.view = `${period.key}/${mode}`;
+  }
+  const notes = [panel.note];
+  if (slots.size >= SLOTS) notes.push(`차트에는 최대 ${SLOTS}개까지 넣을 수 있어요`);
+  document.getElementById(`note-${panel.id}`).textContent = notes.join(' · ');
+}
+
 function renderPage(page) {
   const cfg = PAGES[page];
-  cfg.charts.filter((c) => !cfg.subtabs || c.sub === state.sub[page]).forEach(drawChart);
+  const onSub = (c) => !cfg.subtabs || c.sub === state.sub[page];
+  cfg.charts.filter(onSub).forEach(drawChart);
+  (cfg.panels || []).filter(onSub).forEach((p) => drawPanel(p, page));
 }
 
 // ===== 화면 만들기 =====
@@ -706,9 +821,18 @@ function buildPages() {
         <div class="chart" id="${c.id}"></div>
       </div>`;
     const grid = (list) => `<div class="chart-grid${cfg.cols === 3 ? ' cols-3' : ''}">${list.map((c) => cell(c, list)).join('')}</div>`;
+    const panel = (p) => `
+      <div class="panel">
+        <h2>${p.title}</h2>
+        <div class="filters"><span class="label">기준</span><div class="seg" data-mode="${p.id}"></div></div>
+        <p class="note" id="note-${p.id}"></p>
+        <div class="chart" id="chart-${p.id}"></div>
+        <div class="table-wrap"><table class="ind-table" id="table-${p.id}"></table></div>
+      </div>`;
+    const panels = (s) => (cfg.panels || []).filter((p) => !s || p.sub === s).map(panel).join('');
     const body = cfg.subtabs
-      ? cfg.subtabs.map(([s]) => `<div class="subpage" data-subpage="${id}/${s}">${grid(cfg.charts.filter((c) => c.sub === s))}</div>`).join('')
-      : grid(cfg.charts);
+      ? cfg.subtabs.map(([s]) => `<div class="subpage" data-subpage="${id}/${s}">${grid(cfg.charts.filter((c) => c.sub === s))}${panels(s)}</div>`).join('')
+      : grid(cfg.charts) + panels();
     const groupLabel = GROUPS.find(([g]) => g === cfg.group)[1];
 
     main.insertAdjacentHTML('beforeend', `
@@ -761,7 +885,8 @@ function loadTable(name) {
 
 // 페이지에 필요한 DB 이름 (시장금리는 모든 만기)
 function tablesOf(page) {
-  return [...new Set(PAGES[page].charts.flatMap((spec) => allDefs(spec).flatMap((def) => (def.calc ? def.calc.inputs.map((i) => i.table) : [tableOf(spec, def)]))))];
+  const fromCharts = PAGES[page].charts.flatMap((spec) => allDefs(spec).flatMap((def) => (def.calc ? def.calc.inputs.map((i) => i.table) : [tableOf(spec, def)])));
+  return [...new Set([...fromCharts, ...(PAGES[page].panels || []).map((p) => p.table)])];
 }
 
 async function loadPage(page) {
@@ -856,6 +981,10 @@ function setupFilters(page) {
   // 기본 기간: defaultPeriod(예: 's2000') 가 있으면 그것, 없으면 가장 최근 연도
   state.period[page] = ranges.find((r) => r.key === PAGES[page].defaultPeriod) || singles[singles.length - 1] || MAX_PERIOD;
   buttons(document.querySelector(`[data-years="${page}"]`), [ranges, singles], state.period[page].key, (p) => { state.period[page] = p; renderPage(page); });
+  (PAGES[page].panels || []).forEach((p) => {
+    const modes = [{ key: 'mom', label: 'MoM (전월비)' }, { key: 'yoy', label: 'YoY (전년비)' }];
+    buttons(document.querySelector(`[data-mode="${p.id}"]`), [modes], panelState(p).mode, (m) => { panelState(p).mode = m.key; drawPanel(p, page); });
+  });
   if (PAGES[page].charts.some((c) => c.tenors)) {
     const tenors = TENORS.map((t) => ({ key: t, label: `${t}Y` }));
     buttons(document.getElementById('tenors'), [tenors], state.tenor, (t) => { state.tenor = t.key; renderPage(page); });

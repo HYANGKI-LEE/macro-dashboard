@@ -63,3 +63,46 @@ ids_durable = [
     'ANAPNO', # Manufacturers' New Orders: Nondefense Aircraft and Parts
     'ADAPNO', # Manufacturers' New Orders: Defense Aircraft and Parts
 ]
+
+# Census M3 Table 2 (Value of Manufacturers' New Orders for Industry Groups) - 기업/생산 > 제조업 업종별 표
+# 표 순서 그대로 (SA). 위 리스트와 겹치는 티커는 DB에서 한 칼럼
+ids_table2 = [
+    'AMTMNO', # All manufacturing industries
+    'AMXTNO', # Excluding transportation
+    'AMXDNO', # Excluding defense
+    'AMTUNO', # With unfilled orders
+    'DGORDER', # Durable goods industries
+    'A31SNO', # Primary metals
+    'A31ANO', # Iron and steel mills
+    'AANMNO', # Aluminum and nonferrous metals
+    'A31CNO', # Ferrous metal foundries
+    'A32SNO', # Fabricated metal products
+    'A33SNO', # Machinery
+    'A33CNO', # Construction machinery
+    'A33DNO', # Mining, oil field, and gas field machinery
+    'A33ENO', # Industrial machinery
+    'A33GNO', # Photographic equipment
+    'A33HNO', # Ventilation, heating, air-conditioning, and refrigeration equipment
+    'A33INO', # Metalworking machinery
+    'ATGPNO', # Turbines, generators, and other power transmission equipment
+    'A33MNO', # Material handling equipment
+    'A34SNO', # Computers and electronic products
+    'A34ANO', # Computers
+    'A34DNO', # Nondefense communications equipment
+    'A34ENO', # Defense communications equipment
+    'A34HNO', # Electronic components
+    'A34INO', # Nondefense search and navigation equipment
+    'A34JNO', # Defense search and navigation equipment
+    'A34KNO', # Electromedical, measuring, and control instruments
+    'A35SNO', # Electrical equipment, appliances, and components
+    'A35ANO', # Electric lighting equipment
+    'A35BNO', # Household appliances
+    'A35CNO', # Electrical equipment
+    'A36SNO', # Transportation equipment
+    'ABTPNO', # Motor vehicle bodies, parts, and trailers
+    'ANAPNO', # Nondefense aircraft and parts
+    'ADAPNO', # Defense aircraft and parts
+    'A36ZNO', # Ships and boats
+    'A37SNO', # Furniture and related products
+    'AMNMNO', # Nondurable goods industries
+]

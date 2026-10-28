@@ -18,6 +18,8 @@
   --slot-4: #eda100; --slot-5: #4a3aa7; --slot-6: #e87ba4; --slot-7: #008300;
   /* 기준금리 선 (항상 검정. 대시보드는 라이트 모드 고정) */
   --base-rate: #0b0b0b;
+  /* 표의 상승/하락 숫자 색 (한국식: 상승 빨강, 하락 파랑) */
+  --up: #e34948; --down: #2a78d6;
 }
 
 * { box-sizing: border-box; }
@@ -114,6 +116,25 @@ p.note { margin: 0 0 4px; min-height: 1em; color: var(--text-muted); font-size: 
 }
 
 .chart { width: 100%; height: 440px; }
+
+/* 패널: 업종별 변동률 표 (기업/생산 > 제조업) */
+.panel { margin-top: 16px; padding-top: 8px; border-top: 1px solid var(--border); }
+.panel .chart { height: 380px; }
+.table-wrap { overflow-x: auto; margin-top: 12px; border: 1px solid var(--border); border-radius: 8px; }
+.ind-table { border-collapse: separate; border-spacing: 0; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ind-table th, .ind-table td { padding: 5px 8px; border-bottom: 1px solid var(--grid); text-align: right; }
+.ind-table thead th { position: sticky; top: 0; background: var(--sidebar); color: var(--text-secondary); font-weight: 600; }
+.ind-table .name { position: sticky; left: 0; z-index: 1; text-align: left; background: var(--surface-0); border-right: 1px solid var(--border); font-weight: 400; min-width: 220px; }
+.ind-table thead .name { z-index: 2; background: var(--sidebar); }
+.ind-table tbody tr { cursor: pointer; }
+.ind-table tbody tr:hover td, .ind-table tbody tr:hover .name { background: var(--accent-soft); }
+.ind-table tr.lv0 .name { font-weight: 700; }
+.ind-table tr.lv1 .name { padding-left: 22px; }
+.ind-table tr.lv2 .name { padding-left: 38px; color: var(--text-secondary); }
+.ind-table .chip { display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 2px; border: 1px solid var(--border); vertical-align: -1px; }
+.ind-table tr.on .chip { border-color: transparent; }
+.ind-table td.up { color: var(--up); }
+.ind-table td.down { color: var(--down); }
 
 .loading {
   position: absolute; inset: 0;
