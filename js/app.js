@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261028h';
+const VERSION = '20261028i';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -15,13 +15,15 @@ const INFO_Q = 'infomax_quarterly';
 //   mfg_*     : FRED 항목별 DB (HYANGKI-LEE/fred 의 build_db.py → output/db/*.db). 복사하지 않고 public 리포에서 바로 읽음
 //               세로형(series_id, date, value)이라 LONG_DB 로 주소·테이블을 지정. 칼럼 = FRED 티커
 //               raw.githubusercontent.com 은 5분 캐시라 fred 리포에 push 후 몇 분 뒤 반영
+//               빠르게 받으려고 압축본(.db.gz, build_db.py가 자동 생성)을 받아 워커에서 풀고,
+//               페이지 설정(차트·패널)에 쓰인 티커만 꺼내 변환한다 (seriesFor)
 const FRED_REPO_DB = 'https://raw.githubusercontent.com/HYANGKI-LEE/fred/main/output/db/';
 //   fin_*     : 같은 방식. Financial Indicators DB (S&P500 등. SP500 1990~2016은 인포맥스로 채운 값)
 const MFG_M = 'mfg_monthly';
 const FIN_D = 'fin_daily';
 const LONG_DB = {
-  mfg_monthly: { url: `${FRED_REPO_DB}us_macro_PBA_manufacturing.db`, obs: 'obs_monthly' },
-  fin_daily: { url: `${FRED_REPO_DB}us_macro_MBF_financial_indicator.db`, obs: 'obs_daily' },
+  mfg_monthly: { url: `${FRED_REPO_DB}us_macro_PBA_manufacturing.db.gz`, obs: 'obs_monthly' },
+  fin_daily: { url: `${FRED_REPO_DB}us_macro_MBF_financial_indicator.db.gz`, obs: 'obs_daily' },
 };
 const freqOf = (table) => table.split('_')[1];
 
@@ -895,7 +897,8 @@ function loadTable(name) {
     const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
     pending[name] = { promise, resolve, reject };
     const src = LONG_DB[name];
-    worker.postMessage({ name, obs: src?.obs, url: src ? src.url : new URL(`data/${name}.db?v=${Date.now()}`, location.href).href });
+    worker.postMessage({ name, obs: src?.obs, series: src ? seriesFor(name) : undefined,
+      url: src ? src.url : new URL(`data/${name}.db?v=${Date.now()}`, location.href).href });
   }
   return pending[name].promise;
 }
@@ -904,6 +907,21 @@ function loadTable(name) {
 function tablesOf(page) {
   const fromCharts = PAGES[page].charts.flatMap((spec) => allDefs(spec).flatMap((def) => (def.calc ? def.calc.inputs.map((i) => i.table) : [tableOf(spec, def)])));
   return [...new Set([...fromCharts, ...(PAGES[page].panels || []).map((p) => p.table)])];
+}
+
+// 세로형 DB(LONG_DB)에서 꺼낼 티커: 모든 페이지의 차트·패널 설정에서 그 DB를 쓰는 티커를 모은다
+function seriesFor(table) {
+  const out = new Set();
+  for (const cfg of Object.values(PAGES)) {
+    for (const spec of cfg.charts) {
+      for (const def of allDefs(spec)) {
+        if (def.calc) def.calc.inputs.filter((i) => i.table === table).forEach((i) => out.add(i.col));
+        else if (tableOf(spec, def) === table) [def.exact, def.div, ...(def.splice || [])].filter(Boolean).forEach((c) => out.add(c));
+      }
+    }
+    (cfg.panels || []).filter((p) => p.table === table).forEach((p) => p.rows.forEach(([t]) => out.add(t)));
+  }
+  return [...out];
 }
 
 async function loadPage(page) {

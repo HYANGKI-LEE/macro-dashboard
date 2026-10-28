@@ -21,9 +21,10 @@ function wide(db) {
   return { dates, cols };
 }
 
-// 세로형 → 와이드: 날짜 합집합을 행으로, series_id 를 칼럼으로
-function long(db, obs) {
-  const [result] = db.exec(`SELECT series_id, date, value FROM ${obs} ORDER BY date`);
+// 세로형 → 와이드: 날짜 합집합을 행으로, series_id 를 칼럼으로. series 가 있으면 그 티커만 꺼냄
+function long(db, obs, series) {
+  const where = series ? `WHERE series_id IN (${series.map(() => '?').join(',')})` : '';
+  const [result] = db.exec(`SELECT series_id, date, value FROM ${obs} ${where} ORDER BY date`, series || []);
   const rows = result ? result.values : [];
   const days = [...new Set(rows.map((r) => r[1]))];
   const at = new Map(days.map((d, i) => [d, i]));
@@ -35,14 +36,20 @@ function long(db, obs) {
   return { dates: days.map((d) => Date.parse(`${d}T00:00:00Z`)), cols };
 }
 
-// 요청: { name, url, obs? } → 응답: { ok, name, table: { dates: [epoch ms], cols: { 칼럼: [값|null] } } }
+// .gz 로 끝나는 주소는 받으면서 바로 푼다 (fred 리포 build_db.py 가 만든 압축본)
+async function bytesOf(res, url) {
+  const body = url.split('?')[0].endsWith('.gz') ? res.body.pipeThrough(new DecompressionStream('gzip')) : res.body;
+  return new Uint8Array(await new Response(body).arrayBuffer());
+}
+
+// 요청: { name, url, obs?, series? } → 응답: { ok, name, table: { dates: [epoch ms], cols: { 칼럼: [값|null] } } }
 onmessage = async (e) => {
-  const { name, url, obs } = e.data;
+  const { name, url, obs, series } = e.data;
   try {
     const [SQL, res] = await Promise.all([ready, fetch(url, { cache: 'no-cache' })]);
     if (!res.ok) throw new Error(`${name}.db 를 받지 못했어요 (HTTP ${res.status})`);
-    const db = new SQL.Database(new Uint8Array(await res.arrayBuffer()));
-    const table = obs ? long(db, obs) : wide(db);
+    const db = new SQL.Database(await bytesOf(res, url));
+    const table = obs ? long(db, obs, series) : wide(db);
     db.close();
     postMessage({ ok: true, name, table });
   } catch (err) {
