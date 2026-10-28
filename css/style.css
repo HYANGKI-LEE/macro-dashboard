@@ -91,6 +91,10 @@ h2 { font-size: 16px; margin: 32px 0 8px; }
 /* wide: 한 줄 전체 폭 차트 */
 .chart-grid > .wide { grid-column: 1 / -1; }
 .chart-grid > .wide .chart { height: 360px; }
+/* heading: 차트 묶음 소제목 (한 줄 전체, 다음 차트는 새 줄부터) */
+.chart-grid > .grid-heading { grid-column: 1 / -1; margin-top: 28px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.chart-grid > .grid-heading:first-child { margin-top: 8px; }
+.chart-grid > .grid-heading h3 { margin: 0; font-size: 15px; color: var(--accent); }
 /* 옆 칸의 만기 버튼 줄만큼 높이를 맞춰 두 차트의 위치를 정렬 */
 .filters-spacer { min-height: 27px; }
 p.note { margin: 0 0 4px; min-height: 1em; color: var(--text-muted); font-size: 12px; }

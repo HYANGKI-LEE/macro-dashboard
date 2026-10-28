@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261028m';
+const VERSION = '20261028n';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -127,6 +127,7 @@ const SLOTS = 7; // css --slot-1 ~ --slot-7
 // ===== 사이드바 묶음 · 페이지 · 차트 정의 =====
 // group: 사이드바 묶음. sub: 하위 탭이 있는 페이지에서 차트가 속한 탭. bar: 막대 차트. unit: 축/툴팁 단위.
 // wide: 그리드 한 줄 전체 폭으로 그림 (추이가 촘촘한 막대 차트 등).
+// heading: 이 차트 앞에 소제목 줄을 넣고 새 줄부터 시작 (예: '연체잔액비중 : 상품별').
 const GROUPS = [['oil', '유가'], ['us', '미국'], ['kr', '한국']];
 
 const PAGES = {
@@ -232,7 +233,7 @@ const PAGES = {
     desc: 'FRED 분기 데이터 기준 (엑셀 Main(분기) 신용 차트). 기준금리는 실효 연방기금금리 분기 평균(오른쪽 축). '
       + 'HY 스프레드·수익률과 주요 상업은행(Citi·JPM 등) 카드 데이터는 아직 DB에 없어 뺐어요. GDP·투자 차트는 제외. '
       + '가계신용 탭은 NY Fed 가계신용 보고서(Quarterly Report on Household Debt and Credit) 엑셀 기준.',
-    subtabs: [['leverage', '레버리지'], ['delinq', '연체율'], ['sloos', 'SLOOS'], ['hhdc', '가계신용']],
+    subtabs: [['leverage', '레버리지'], ['delinq', '연체율'], ['sloos', 'SLOOS'], ['hhdc', '가계신용 보고서']],
     cols: 3,
     defaultPeriod: 's2000',
     charts: [
@@ -397,7 +398,7 @@ const PAGES = {
         { color: '--slot-1', label: 'PCE', exact: 'PCEC', transform: 'yoy' },
       ] },
       // --- 가계신용: NY Fed Quarterly Report on Household Debt and Credit (HHD_C_Report 엑셀) ---
-      { sub: 'hhdc', id: 'hh-debt-mix', title: '가계부채 잔액 · 구성', table: HHDC_Q, unit: '조 달러', unit2: '조 달러', digits: 2, defs: [
+      { sub: 'hhdc', heading: '부채 잔액 : 상품 구성', id: 'hh-debt-mix', title: '가계부채 잔액 · 구성', table: HHDC_Q, unit: '조 달러', unit2: '조 달러', digits: 2, defs: [
         { color: '--slot-1', label: '모기지', exact: 'P03_MORTGAGE' },
         { color: '--slot-2', label: '자동차', exact: 'P03_AUTO_LOAN' },
         { color: '--slot-3', label: '신용카드', exact: 'P03_CREDIT_CARD' },
@@ -406,7 +407,15 @@ const PAGES = {
         { color: '--slot-6', label: '기타', exact: 'P03_OTHER' },
         { other: true, dash: 'dashed', label: '전체(우)', exact: 'P03_TOTAL', right: true },
       ], note: '모기지·전체는 규모가 커서 범례로 끄고 보면 나머지가 잘 보여요' },
-      { sub: 'hhdc', id: 'hh-dq90', title: '90일+ 연체 잔액 비중', table: HHDC_Q, unit: '%', digits: 2, defs: [
+      { sub: 'hhdc', id: 'hh-debt-share', title: '가계부채 구성 비중', table: HHDC_Q, unit: '%', digits: 1, defs: [
+        { color: '--slot-1', label: '모기지', exact: 'P03_MORTGAGE', div: 'P03_TOTAL', scale: 100 },
+        { color: '--slot-2', label: '자동차', exact: 'P03_AUTO_LOAN', div: 'P03_TOTAL', scale: 100 },
+        { color: '--slot-3', label: '신용카드', exact: 'P03_CREDIT_CARD', div: 'P03_TOTAL', scale: 100 },
+        { color: '--slot-4', label: '학자금', exact: 'P03_STUDENT_LOAN', div: 'P03_TOTAL', scale: 100 },
+        { color: '--slot-5', label: 'HELOC', exact: 'P03_HE_REVOLVING', div: 'P03_TOTAL', scale: 100 },
+        { color: '--slot-6', label: '기타', exact: 'P03_OTHER', div: 'P03_TOTAL', scale: 100 },
+      ], note: '전체 가계부채 대비 비중. 모기지를 범례로 끄면 나머지가 잘 보여요' },
+      { sub: 'hhdc', heading: '연체잔액비중 : 연체 종류별', id: 'hh-dq90', title: '90일+ 연체 잔액 비중', table: HHDC_Q, unit: '%', digits: 2, defs: [
         { color: '--slot-1', label: '신용카드', exact: 'P12_CC' },
         { color: '--slot-2', label: '학자금', exact: 'P12_STUDENT_LOAN' },
         { color: '--slot-3', label: '자동차', exact: 'P12_AUTO' },
@@ -430,7 +439,16 @@ const PAGES = {
         { color: '--slot-5', label: 'HELOC', exact: 'P14_HELOC' },
         { other: true, dash: 'dashed', label: '전체', exact: 'P14_ALL' },
       ], note: '시장이 가장 많이 보는 지표. 해당 분기에 90일 이상 연체로 새로 넘어간 잔액 비율 (연율)' },
-      { sub: 'hhdc', id: 'hh-cc-age', title: '카드 90일+ 전이율: 연령대별', table: HHDC_Q, unit: '%', digits: 1, defs: [
+      // 상품별: 한 상품의 90일+ 연체 비중(P12) · 신규 연체 전이율(P13) · 신규 심각 연체 전이율(P14)
+      ...[['CC', '신용카드'], ['STUDENT_LOAN', '학자금'], ['AUTO', '자동차'], ['MORTGAGE', '모기지'], ['HELOC', 'HELOC']].map(([code, name], i) => ({
+        sub: 'hhdc', heading: i === 0 ? '연체잔액비중 : 상품별' : undefined, id: `hh-product-${code.toLowerCase()}`,
+        title: `${name}: 연체 비중 · 전이율`, table: HHDC_Q, unit: '%', digits: 2, defs: [
+          { color: '--slot-1', label: '90일+ 연체 비중', exact: `P12_${code}` },
+          { color: '--slot-2', label: '신규 연체 전이율(30일+)', exact: `P13_${code}` },
+          { color: '--slot-3', label: '신규 심각 연체 전이율(90일+)', exact: `P14_${code}` },
+        ],
+      })),
+      { sub: 'hhdc', heading: '전이율 : 연령대별', id: 'hh-cc-age', title: '카드 90일+ 전이율: 연령대별', table: HHDC_Q, unit: '%', digits: 1, defs: [
         { color: '--slot-1', label: '18-29', exact: 'P27_18_29' },
         { color: '--slot-2', label: '30-39', exact: 'P27_30_39' },
         { color: '--slot-3', label: '40-49', exact: 'P27_40_49' },
@@ -448,7 +466,7 @@ const PAGES = {
         { color: '--slot-6', label: '70+', exact: 'P26_70' },
         { other: true, dash: 'dashed', label: '전체', exact: 'P26_ALL' },
       ], note: '4분기 이동합계' },
-      { sub: 'hhdc', id: 'hh-cc-util', title: '신용카드 잔액 · 한도 · 사용률', table: HHDC_Q, unit: '조 달러', unit2: '%', digits: 2, defs: [
+      { sub: 'hhdc', heading: '기타 : 카드 한도 · 부실 · 신용점수', id: 'hh-cc-util', title: '신용카드 잔액 · 한도 · 사용률', table: HHDC_Q, unit: '조 달러', unit2: '%', digits: 2, defs: [
         { color: '--slot-1', label: '잔액', exact: 'P10_CREDIT_CARD_BALANCE' },
         { color: '--slot-2', label: '한도', exact: 'P10_CREDIT_CARD_LIMIT' },
         { color: '--slot-3', label: '사용률(우)', exact: 'P10_CREDIT_CARD_BALANCE', div: 'P10_CREDIT_CARD_LIMIT', scale: 100, right: true },
@@ -949,7 +967,8 @@ function buildPages() {
         <p class="note" id="note-${c.id}"></p>
         <div class="chart" id="${c.id}"></div>
       </div>`;
-    const grid = (list) => `<div class="chart-grid${cfg.cols === 3 ? ' cols-3' : ''}">${list.map((c) => cell(c, list)).join('')}</div>`;
+    const heading = (c) => (c.heading ? `<div class="grid-heading"><h3>${c.heading}</h3></div>` : '');
+    const grid = (list) => `<div class="chart-grid${cfg.cols === 3 ? ' cols-3' : ''}">${list.map((c) => heading(c) + cell(c, list)).join('')}</div>`;
     const panel = (p) => `
       <div class="panel">
         <h2>${p.title}</h2>
