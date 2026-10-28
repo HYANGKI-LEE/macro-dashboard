@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261028g';
+const VERSION = '20261028h';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -16,8 +16,13 @@ const INFO_Q = 'infomax_quarterly';
 //               세로형(series_id, date, value)이라 LONG_DB 로 주소·테이블을 지정. 칼럼 = FRED 티커
 //               raw.githubusercontent.com 은 5분 캐시라 fred 리포에 push 후 몇 분 뒤 반영
 const FRED_REPO_DB = 'https://raw.githubusercontent.com/HYANGKI-LEE/fred/main/output/db/';
+//   fin_*     : 같은 방식. Financial Indicators DB (S&P500 등. SP500 1990~2016은 인포맥스로 채운 값)
 const MFG_M = 'mfg_monthly';
-const LONG_DB = { mfg_monthly: { url: `${FRED_REPO_DB}us_macro_PBA_manufacturing.db`, obs: 'obs_monthly' } };
+const FIN_D = 'fin_daily';
+const LONG_DB = {
+  mfg_monthly: { url: `${FRED_REPO_DB}us_macro_PBA_manufacturing.db`, obs: 'obs_monthly' },
+  fin_daily: { url: `${FRED_REPO_DB}us_macro_MBF_financial_indicator.db`, obs: 'obs_daily' },
+};
 const freqOf = (table) => table.split('_')[1];
 
 // ===== 시리즈 정의 =====
@@ -400,6 +405,12 @@ const PAGES = {
         { color: '--slot-2', label: '운송 제외', exact: 'ADXTNO', transform: 'mom' },
         { color: '--slot-3', label: '근원 자본재', exact: 'NEWORDER', transform: 'mom' },
       ], note: '근원 자본재 = 비국방 자본재(항공기 제외)' },
+      { sub: 'manufacturing', id: 'dg-spx', title: 'S&P500 vs 내구재 수주 (YoY)', table: MFG_M, unit: '%', unit2: '%', digits: 1, wide: true, defs: [
+        { color: '--up', label: 'S&P500', exact: 'SP500', table: FIN_D, monthly: true, transform: 'yoy' },
+        { color: '--slot-1', label: '근원 자본재 수주(우)', exact: 'NEWORDER', transform: 'yoy', right: true },
+        { color: '--slot-3', label: '운송 제외(우)', exact: 'ADXTNO', transform: 'yoy', right: true },
+        { other: true, hidden: true, label: '내구재(우)', exact: 'DGORDER', transform: 'yoy', right: true },
+      ], note: 'S&P500은 월말 종가 기준. 1990~2016.10은 인포맥스 값으로 채움(FRED는 최근 10년만 제공). 내구재(헤드라인)는 범례를 누르면 보여요' },
       { sub: 'manufacturing', id: 'dg-yoy', title: '내구재 수주 전년비', table: MFG_M, unit: '%', digits: 1, defs: [
         { color: '--slot-1', label: '내구재', exact: 'DGORDER', transform: 'yoy' },
         { color: '--slot-2', label: '운송 제외', exact: 'ADXTNO', transform: 'yoy' },
