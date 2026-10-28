@@ -132,6 +132,8 @@ p.note { margin: 0 0 4px; min-height: 1em; color: var(--text-muted); font-size: 
 .ind-table tbody tr { cursor: pointer; }
 .ind-table tbody tr:hover td, .ind-table tbody tr:hover .name { background: var(--accent-soft); }
 .ind-table tr.lv0 .name { font-weight: 700; }
+/* 따로 묶은 행(근원 자본재) 아래 Table 2 시작 구분선 */
+.ind-table tr.sep th, .ind-table tr.sep td { border-top: 6px solid var(--sidebar); }
 .ind-table tr.lv1 .name { padding-left: 22px; }
 .ind-table tr.lv2 .name { padding-left: 38px; color: var(--text-secondary); }
 .ind-table .chip { display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 2px; border: 1px solid var(--border); vertical-align: -1px; }

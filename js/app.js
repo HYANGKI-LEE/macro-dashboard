@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261028f';
+const VERSION = '20261028g';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -68,10 +68,10 @@ const FFR_Q = { color: '--base-rate', label: '기준금리(우)', table: FRED_Q,
 // calc 입력 칼럼 (기본: FRED 분기, 분기 마지막 값)
 const Q = (col, table = FRED_Q, agg = 'last') => ({ col, table, agg });
 
-// Census M3 Table 2 (Value of Manufacturers' New Orders for Industry Groups) 행 순서. [티커(SA), 이름, 원문, 들여쓰기]
-// 맨 위 근원 자본재 수주는 Table 2에 없는 참고 행 (용도별 분류, 시장이 가장 주목하는 설비투자 선행지표)
+// Census M3 Table 2 (Value of Manufacturers' New Orders for Industry Groups) 행 순서. [티커(SA), 이름, 원문, 들여쓰기, 따로 묶음]
+// 맨 위 근원 자본재 수주는 Table 2에 없는 행 (용도별 분류, 시장이 가장 주목하는 설비투자 선행지표). 'top' 행 아래에 구분선
 const TABLE2 = [
-  ['NEWORDER', '근원 자본재 수주 (참고)', 'Nondefense capital goods excluding aircraft (core capital goods) - Table 2 외 참고 행', 0],
+  ['NEWORDER', '근원 자본재 수주', 'Nondefense capital goods excluding aircraft (core capital goods) - Table 2 외', 0, 'top'],
   ['AMTMNO', '제조업 전체', 'All manufacturing industries', 0],
   ['AMXTNO', '운송장비 제외', 'Excluding transportation', 1],
   ['AMXDNO', '국방 제외', 'Excluding defense', 1],
@@ -776,10 +776,11 @@ function drawPanel(panel, page) {
   const cell = (v) => (v === undefined ? '<td></td>' : `<td class="${v > 0 ? 'up' : v < 0 ? 'down' : ''}">${v.toFixed(1)}</td>`);
   const html = `
     <thead><tr><th class="name">업종 (${label}, %)</th>${months.map((t) => `<th>${ym(t).replace('-', '.')}</th>`).join('')}</tr></thead>
-    <tbody>${rows.map(({ row: [t, name, en, level], at }) => {
+    <tbody>${rows.map(({ row: [t, name, en, level, top], at }, i) => {
+      const sep = !top && rows[i - 1]?.row[4] === 'top'; // 따로 묶은 행 다음 첫 행
       const slot = slots.get(t);
       const chip = slot ? `<i class="chip" style="background:var(--slot-${slot})"></i>` : '<i class="chip"></i>';
-      return `<tr data-ticker="${t}" class="lv${level}${slot ? ' on' : ''}"><th class="name" title="${en} (${t})">${chip}${name}</th>${months.map((m) => cell(at.get(m))).join('')}</tr>`;
+      return `<tr data-ticker="${t}" class="lv${level}${slot ? ' on' : ''}${sep ? ' sep' : ''}"><th class="name" title="${en} (${t})">${chip}${name}</th>${months.map((m) => cell(at.get(m))).join('')}</tr>`;
     }).join('')}</tbody>`;
   const el = document.getElementById(`table-${panel.id}`);
   el.innerHTML = html;
