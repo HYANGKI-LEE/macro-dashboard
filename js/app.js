@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261028b';
+const VERSION = '20261028d';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -12,6 +12,12 @@ const FRED_Q = 'fred_quarterly';
 const INFO_D = 'infomax_daily';
 const INFO_M = 'infomax_monthly';
 const INFO_Q = 'infomax_quarterly';
+//   mfg_*     : FRED 항목별 DB (HYANGKI-LEE/fred 의 build_db.py → output/db/*.db). 복사하지 않고 public 리포에서 바로 읽음
+//               세로형(series_id, date, value)이라 LONG_DB 로 주소·테이블을 지정. 칼럼 = FRED 티커
+//               raw.githubusercontent.com 은 5분 캐시라 fred 리포에 push 후 몇 분 뒤 반영
+const FRED_REPO_DB = 'https://raw.githubusercontent.com/HYANGKI-LEE/fred/main/output/db/';
+const MFG_M = 'mfg_monthly';
+const LONG_DB = { mfg_monthly: { url: `${FRED_REPO_DB}us_macro_PBA_manufacturing.db`, obs: 'obs_monthly' } };
 const freqOf = (table) => table.split('_')[1];
 
 // ===== 시리즈 정의 =====
@@ -381,53 +387,53 @@ const PAGES = {
   business: {
     group: 'us',
     title: '기업/생산',
-    desc: 'FRED 월별 데이터 기준. 제조업: Census 내구재 주문(M3) — 수주·출하·재고 모두 계절조정 금액(백만 달러)에서 계산.',
+    desc: 'FRED 월별 데이터 기준. 제조업: Census M3(제조업 출하·재고·수주) — fred 리포(HYANGKI-LEE/fred)의 Manufacturing 항목 DB를 바로 읽고, 수주·출하·재고 모두 계절조정 금액(백만 달러)에서 계산.',
     subtabs: [['manufacturing', '제조업']],
     cols: 3,
     defaultPeriod: 's2020',
     charts: [
-      { sub: 'manufacturing', id: 'dg-mom', title: '내구재 수주 전월비', table: FRED_M, unit: '%', digits: 1, bar: true, defs: [
+      { sub: 'manufacturing', id: 'dg-mom', title: '내구재 수주 전월비', table: MFG_M, unit: '%', digits: 1, bar: true, defs: [
         { color: '--slot-1', label: '내구재', exact: 'DGORDER', transform: 'mom' },
         { color: '--slot-2', label: '운송 제외', exact: 'ADXTNO', transform: 'mom' },
         { color: '--slot-3', label: '근원 자본재', exact: 'NEWORDER', transform: 'mom' },
       ], note: '근원 자본재 = 비국방 자본재(항공기 제외)' },
-      { sub: 'manufacturing', id: 'dg-yoy', title: '내구재 수주 전년비', table: FRED_M, unit: '%', digits: 1, defs: [
+      { sub: 'manufacturing', id: 'dg-yoy', title: '내구재 수주 전년비', table: MFG_M, unit: '%', digits: 1, defs: [
         { color: '--slot-1', label: '내구재', exact: 'DGORDER', transform: 'yoy' },
         { color: '--slot-2', label: '운송 제외', exact: 'ADXTNO', transform: 'yoy' },
         { color: '--slot-3', label: '국방 제외', exact: 'ADXDNO', transform: 'yoy' },
       ] },
-      { sub: 'manufacturing', id: 'dg-core', title: '근원 자본재 수주 · 출하 (YoY)', table: FRED_M, unit: '%', digits: 1, defs: [
+      { sub: 'manufacturing', id: 'dg-core', title: '근원 자본재 수주 · 출하 (YoY)', table: MFG_M, unit: '%', digits: 1, defs: [
         { color: '--slot-1', label: '수주', exact: 'NEWORDER', transform: 'yoy' },
         { color: '--slot-2', label: '출하', exact: 'ANXAVS', transform: 'yoy' },
       ], note: '수주는 설비투자 선행, 출하는 GDP 장비투자 추정에 쓰임' },
-      { sub: 'manufacturing', id: 'dg-level', title: '내구재 수주 금액', table: FRED_M, unit: '십억 달러', digits: 1, defs: [
+      { sub: 'manufacturing', id: 'dg-level', title: '내구재 수주 금액', table: MFG_M, unit: '십억 달러', digits: 1, defs: [
         { color: '--slot-1', label: '내구재', exact: 'DGORDER', scale: 0.001 },
         { color: '--slot-2', label: '운송 제외', exact: 'ADXTNO', scale: 0.001 },
         { color: '--slot-3', label: '근원 자본재', exact: 'NEWORDER', scale: 0.001 },
       ] },
-      { sub: 'manufacturing', id: 'dg-capital', title: '비국방 자본재 수주: 항공기 포함 vs 제외', table: FRED_M, unit: '십억 달러', digits: 1, defs: [
+      { sub: 'manufacturing', id: 'dg-capital', title: '비국방 자본재 수주: 항공기 포함 vs 제외', table: MFG_M, unit: '십억 달러', digits: 1, defs: [
         { color: '--slot-1', label: '항공기 포함', exact: 'ANDENO', scale: 0.001 },
         { color: '--slot-2', label: '항공기 제외(근원)', exact: 'NEWORDER', scale: 0.001 },
       ] },
-      { sub: 'manufacturing', id: 'dg-ratio', title: '수주잔고 · 재고 / 출하', table: FRED_M, unit: '개월', digits: 2, defs: [
+      { sub: 'manufacturing', id: 'dg-ratio', title: '수주잔고 · 재고 / 출하', table: MFG_M, unit: '개월', digits: 2, defs: [
         { color: '--slot-1', label: '수주잔고/출하', exact: 'AMDMUO', div: 'AMDMVS' },
         { color: '--slot-2', label: '재고/출하', exact: 'AMDMTI', div: 'AMDMVS' },
       ], note: '월 출하액 대비 몇 개월치인지' },
-      { sub: 'manufacturing', id: 'dg-industry', title: '업종별 수주 전년비', table: FRED_M, unit: '%', digits: 1, defs: [
+      { sub: 'manufacturing', id: 'dg-industry', title: '업종별 수주 전년비', table: MFG_M, unit: '%', digits: 1, defs: [
         { color: '--slot-1', label: '컴퓨터·전자', exact: 'A34SNO', transform: 'yoy' },
         { color: '--slot-2', label: '기계', exact: 'A33SNO', transform: 'yoy' },
         { color: '--slot-3', label: '전기장비', exact: 'A35SNO', transform: 'yoy' },
         { color: '--slot-4', label: '1차 금속', exact: 'A31SNO', transform: 'yoy' },
         { color: '--slot-5', label: '금속가공', exact: 'A32SNO', transform: 'yoy' },
       ] },
-      { sub: 'manufacturing', id: 'dg-transport', title: '운송장비 · 항공기 수주', table: FRED_M, unit: '십억 달러', digits: 1, defs: [
+      { sub: 'manufacturing', id: 'dg-transport', title: '운송장비 · 항공기 수주', table: MFG_M, unit: '십억 달러', digits: 1, defs: [
         { color: '--slot-1', label: '운송장비', exact: 'A36SNO', scale: 0.001 },
         { color: '--slot-2', label: '민간 항공기', exact: 'ANAPNO', scale: 0.001 },
         { color: '--slot-3', label: '국방 항공기', exact: 'ADAPNO', scale: 0.001 },
       ], note: '민간 항공기 수주(보잉 등)가 헤드라인 변동의 주원인' },
     ],
     panels: [
-      { sub: 'manufacturing', id: 'm3-table2', title: '업종별 신규 수주 변동률 (Census M3 Table 2, 계절조정)', table: FRED_M,
+      { sub: 'manufacturing', id: 'm3-table2', title: '업종별 신규 수주 변동률 (Census M3 Table 2, 계절조정)', table: MFG_M,
         rows: TABLE2, selected: ['AMTMNO', 'DGORDER', 'AMNMNO'],
         note: '표의 업종 행을 누르면 차트에 추가·제거돼요 (최대 7개). 업종명에 마우스를 올리면 Census 원문 이름이 보여요.' },
     ],
@@ -878,7 +884,8 @@ function loadTable(name) {
     let resolve; let reject;
     const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
     pending[name] = { promise, resolve, reject };
-    worker.postMessage({ name, url: new URL(`data/${name}.db?v=${Date.now()}`, location.href).href });
+    const src = LONG_DB[name];
+    worker.postMessage({ name, obs: src?.obs, url: src ? src.url : new URL(`data/${name}.db?v=${Date.now()}`, location.href).href });
   }
   return pending[name].promise;
 }
