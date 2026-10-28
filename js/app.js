@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261028l';
+const VERSION = '20261028m';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -19,11 +19,14 @@ const INFO_Q = 'infomax_quarterly';
 //               페이지 설정(차트·패널)에 쓰인 티커만 꺼내 변환한다 (seriesFor)
 const FRED_REPO_DB = 'https://raw.githubusercontent.com/HYANGKI-LEE/fred/main/output/db/';
 //   fin_*     : 같은 방식. Financial Indicators DB (S&P500 등. SP500 1990~2016은 인포맥스로 채운 값)
+//   nyfed_*   : 같은 방식. NY Fed 가계신용 보고서(HHDC) DB — fred 리포 nyfed_hhdc.py, 티커 = P<쪽>_<항목> (FRED 아님)
 const MFG_M = 'mfg_monthly';
 const FIN_D = 'fin_daily';
+const HHDC_Q = 'nyfed_quarterly';
 const LONG_DB = {
   mfg_monthly: { url: `${FRED_REPO_DB}us_macro_PBA_manufacturing.db.gz`, obs: 'obs_monthly' },
   fin_daily: { url: `${FRED_REPO_DB}us_macro_MBF_financial_indicator.db.gz`, obs: 'obs_daily' },
+  nyfed_quarterly: { url: `${FRED_REPO_DB}nyfed_household_credit.db.gz`, obs: 'obs_quarterly' },
 };
 const freqOf = (table) => table.split('_')[1];
 
@@ -227,8 +230,9 @@ const PAGES = {
     group: 'us',
     title: '신용',
     desc: 'FRED 분기 데이터 기준 (엑셀 Main(분기) 신용 차트). 기준금리는 실효 연방기금금리 분기 평균(오른쪽 축). '
-      + 'HY 스프레드·수익률과 주요 상업은행(Citi·JPM 등) 카드 데이터는 아직 DB에 없어 뺐어요. GDP·투자 차트는 제외.',
-    subtabs: [['leverage', '레버리지'], ['delinq', '연체율'], ['sloos', 'SLOOS']],
+      + 'HY 스프레드·수익률과 주요 상업은행(Citi·JPM 등) 카드 데이터는 아직 DB에 없어 뺐어요. GDP·투자 차트는 제외. '
+      + '가계신용 탭은 NY Fed 가계신용 보고서(Quarterly Report on Household Debt and Credit) 엑셀 기준.',
+    subtabs: [['leverage', '레버리지'], ['delinq', '연체율'], ['sloos', 'SLOOS'], ['hhdc', '가계신용']],
     cols: 3,
     defaultPeriod: 's2000',
     charts: [
@@ -392,6 +396,73 @@ const PAGES = {
       { sub: 'leverage', id: 'etc-pce', title: '명목 PCE 증가율 (YoY)', table: FRED_Q, unit: '%', digits: 1, defs: [
         { color: '--slot-1', label: 'PCE', exact: 'PCEC', transform: 'yoy' },
       ] },
+      // --- 가계신용: NY Fed Quarterly Report on Household Debt and Credit (HHD_C_Report 엑셀) ---
+      { sub: 'hhdc', id: 'hh-debt-mix', title: '가계부채 잔액 · 구성', table: HHDC_Q, unit: '조 달러', unit2: '조 달러', digits: 2, defs: [
+        { color: '--slot-1', label: '모기지', exact: 'P03_MORTGAGE' },
+        { color: '--slot-2', label: '자동차', exact: 'P03_AUTO_LOAN' },
+        { color: '--slot-3', label: '신용카드', exact: 'P03_CREDIT_CARD' },
+        { color: '--slot-4', label: '학자금', exact: 'P03_STUDENT_LOAN' },
+        { color: '--slot-5', label: 'HELOC', exact: 'P03_HE_REVOLVING' },
+        { color: '--slot-6', label: '기타', exact: 'P03_OTHER' },
+        { other: true, dash: 'dashed', label: '전체(우)', exact: 'P03_TOTAL', right: true },
+      ], note: '모기지·전체는 규모가 커서 범례로 끄고 보면 나머지가 잘 보여요' },
+      { sub: 'hhdc', id: 'hh-dq90', title: '90일+ 연체 잔액 비중', table: HHDC_Q, unit: '%', digits: 2, defs: [
+        { color: '--slot-1', label: '신용카드', exact: 'P12_CC' },
+        { color: '--slot-2', label: '학자금', exact: 'P12_STUDENT_LOAN' },
+        { color: '--slot-3', label: '자동차', exact: 'P12_AUTO' },
+        { color: '--slot-4', label: '모기지', exact: 'P12_MORTGAGE' },
+        { color: '--slot-5', label: 'HELOC', exact: 'P12_HELOC' },
+        { other: true, dash: 'dashed', label: '전체', exact: 'P12_ALL' },
+      ] },
+      { sub: 'hhdc', id: 'hh-new-dq30', title: '신규 연체 전이율 (30일+)', table: HHDC_Q, unit: '%', digits: 2, defs: [
+        { color: '--slot-1', label: '신용카드', exact: 'P13_CC' },
+        { color: '--slot-2', label: '학자금', exact: 'P13_STUDENT_LOAN' },
+        { color: '--slot-3', label: '자동차', exact: 'P13_AUTO' },
+        { color: '--slot-4', label: '모기지', exact: 'P13_MORTGAGE' },
+        { color: '--slot-5', label: 'HELOC', exact: 'P13_HELOC' },
+        { other: true, dash: 'dashed', label: '전체', exact: 'P13_TOTAL' },
+      ], note: '정상 잔액 중 해당 분기에 30일 이상 연체로 넘어간 비율 (연율)' },
+      { sub: 'hhdc', id: 'hh-new-dq90', title: '신규 심각 연체 전이율 (90일+)', table: HHDC_Q, unit: '%', digits: 2, defs: [
+        { color: '--slot-1', label: '신용카드', exact: 'P14_CC' },
+        { color: '--slot-2', label: '학자금', exact: 'P14_STUDENT_LOAN' },
+        { color: '--slot-3', label: '자동차', exact: 'P14_AUTO' },
+        { color: '--slot-4', label: '모기지', exact: 'P14_MORTGAGE' },
+        { color: '--slot-5', label: 'HELOC', exact: 'P14_HELOC' },
+        { other: true, dash: 'dashed', label: '전체', exact: 'P14_ALL' },
+      ], note: '시장이 가장 많이 보는 지표. 해당 분기에 90일 이상 연체로 새로 넘어간 잔액 비율 (연율)' },
+      { sub: 'hhdc', id: 'hh-cc-age', title: '카드 90일+ 전이율: 연령대별', table: HHDC_Q, unit: '%', digits: 1, defs: [
+        { color: '--slot-1', label: '18-29', exact: 'P27_18_29' },
+        { color: '--slot-2', label: '30-39', exact: 'P27_30_39' },
+        { color: '--slot-3', label: '40-49', exact: 'P27_40_49' },
+        { color: '--slot-4', label: '50-59', exact: 'P27_50_59' },
+        { color: '--slot-5', label: '60-69', exact: 'P27_60_69' },
+        { color: '--slot-6', label: '70+', exact: 'P27_70' },
+        { other: true, dash: 'dashed', label: '전체', exact: 'P27_ALL' },
+      ], note: '4분기 이동합계' },
+      { sub: 'hhdc', id: 'hh-auto-age', title: '자동차 90일+ 전이율: 연령대별', table: HHDC_Q, unit: '%', digits: 1, defs: [
+        { color: '--slot-1', label: '18-29', exact: 'P26_18_29' },
+        { color: '--slot-2', label: '30-39', exact: 'P26_30_39' },
+        { color: '--slot-3', label: '40-49', exact: 'P26_40_49' },
+        { color: '--slot-4', label: '50-59', exact: 'P26_50_59' },
+        { color: '--slot-5', label: '60-69', exact: 'P26_60_69' },
+        { color: '--slot-6', label: '70+', exact: 'P26_70' },
+        { other: true, dash: 'dashed', label: '전체', exact: 'P26_ALL' },
+      ], note: '4분기 이동합계' },
+      { sub: 'hhdc', id: 'hh-cc-util', title: '신용카드 잔액 · 한도 · 사용률', table: HHDC_Q, unit: '조 달러', unit2: '%', digits: 2, defs: [
+        { color: '--slot-1', label: '잔액', exact: 'P10_CREDIT_CARD_BALANCE' },
+        { color: '--slot-2', label: '한도', exact: 'P10_CREDIT_CARD_LIMIT' },
+        { color: '--slot-3', label: '사용률(우)', exact: 'P10_CREDIT_CARD_BALANCE', div: 'P10_CREDIT_CARD_LIMIT', scale: 100, right: true },
+      ] },
+      { sub: 'hhdc', id: 'hh-fc-bk', title: '신규 압류 · 파산 소비자 수', table: HHDC_Q, unit: '천 명', digits: 0, defs: [
+        { color: '--slot-1', label: '압류', exact: 'P17_FORECLOSURE' },
+        { color: '--slot-2', label: '파산', exact: 'P17_BANKRUPTCY' },
+      ] },
+      { sub: 'hhdc', id: 'hh-score', title: '신규 대출 신용점수 (중위값)', table: HHDC_Q, unit: '점', digits: 0, defs: [
+        { color: '--slot-1', label: '모기지', exact: 'P07_MEDIAN' },
+        { color: '--slot-2', label: '자동차', exact: 'P09_MEDIAN' },
+        { color: '--slot-1', dash: 'dotted', hidden: true, label: '모기지 하위 10%', exact: 'P07_10TH_PERCENTILE' },
+        { color: '--slot-2', dash: 'dotted', hidden: true, label: '자동차 하위 10%', exact: 'P09_10TH_PERCENTILE' },
+      ], note: '모기지는 2026Q1부터 VantageScore 4.0 (이전 Equifax Riskscore 3.0)' },
     ],
   },
   // 기업/생산: 제조업 = Census M3 내구재 주문 (FRED 월별, 계절조정)
@@ -483,7 +554,7 @@ const ym = (t) => new Date(t).toISOString().slice(0, 7);
 const quarterLabel = (t) => { const d = new Date(t); return `${d.getUTCFullYear()}.${Math.floor(d.getUTCMonth() / 3) + 1}Q`; };
 const defsOf = (spec) => (typeof spec.defs === 'function' ? spec.defs() : spec.defs);
 const tableOf = (spec, def) => def.table || spec.table;
-// 툴팁에 붙일 FRED 티커 (FRED 데이터일 때만. 인포맥스는 빈 문자열)
+// 툴팁에 붙일 티커 (FRED·항목별 DB일 때만. NY Fed는 P<쪽>_<항목>. 인포맥스는 빈 문자열)
 const isFred = (table) => table.startsWith('fred_') || !!LONG_DB[table];
 function fredTicker(spec, def) {
   if (def.calc) return def.calc.inputs.filter((i) => isFred(i.table)).map((i) => i.col).join(', ');
