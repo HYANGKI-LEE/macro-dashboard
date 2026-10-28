@@ -88,6 +88,9 @@ h2 { font-size: 16px; margin: 32px 0 8px; }
 .chart-grid.cols-3 h2 { font-size: 14px; margin-top: 24px; }
 .chart-grid.cols-3 .chart { height: 320px; }
 @media (max-width: 1100px) { .chart-grid.cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* wide: 한 줄 전체 폭 차트 */
+.chart-grid > .wide { grid-column: 1 / -1; }
+.chart-grid > .wide .chart { height: 360px; }
 /* 옆 칸의 만기 버튼 줄만큼 높이를 맞춰 두 차트의 위치를 정렬 */
 .filters-spacer { min-height: 27px; }
 p.note { margin: 0 0 4px; min-height: 1em; color: var(--text-muted); font-size: 12px; }

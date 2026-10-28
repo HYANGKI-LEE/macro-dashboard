@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261028e';
+const VERSION = '20261028f';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -115,6 +115,7 @@ const SLOTS = 7; // css --slot-1 ~ --slot-7
 
 // ===== 사이드바 묶음 · 페이지 · 차트 정의 =====
 // group: 사이드바 묶음. sub: 하위 탭이 있는 페이지에서 차트가 속한 탭. bar: 막대 차트. unit: 축/툴팁 단위.
+// wide: 그리드 한 줄 전체 폭으로 그림 (추이가 촘촘한 막대 차트 등).
 const GROUPS = [['oil', '유가'], ['us', '미국'], ['kr', '한국']];
 
 const PAGES = {
@@ -394,7 +395,7 @@ const PAGES = {
     cols: 3,
     defaultPeriod: 's2020',
     charts: [
-      { sub: 'manufacturing', id: 'dg-mom', title: '내구재 수주 전월비', table: MFG_M, unit: '%', digits: 1, bar: true, defs: [
+      { sub: 'manufacturing', id: 'dg-mom', title: '내구재 수주 전월비', table: MFG_M, unit: '%', digits: 1, bar: true, wide: true, defs: [
         { color: '--slot-1', label: '내구재', exact: 'DGORDER', transform: 'mom' },
         { color: '--slot-2', label: '운송 제외', exact: 'ADXTNO', transform: 'mom' },
         { color: '--slot-3', label: '근원 자본재', exact: 'NEWORDER', transform: 'mom' },
@@ -408,19 +409,6 @@ const PAGES = {
         { color: '--slot-1', label: '수주', exact: 'NEWORDER', transform: 'yoy' },
         { color: '--slot-2', label: '출하', exact: 'ANXAVS', transform: 'yoy' },
       ], note: '수주는 설비투자 선행, 출하는 GDP 장비투자 추정에 쓰임' },
-      { sub: 'manufacturing', id: 'dg-level', title: '내구재 수주 금액', table: MFG_M, unit: '십억 달러', digits: 1, defs: [
-        { color: '--slot-1', label: '내구재', exact: 'DGORDER', scale: 0.001 },
-        { color: '--slot-2', label: '운송 제외', exact: 'ADXTNO', scale: 0.001 },
-        { color: '--slot-3', label: '근원 자본재', exact: 'NEWORDER', scale: 0.001 },
-      ] },
-      { sub: 'manufacturing', id: 'dg-capital', title: '비국방 자본재 수주: 항공기 포함 vs 제외', table: MFG_M, unit: '십억 달러', digits: 1, defs: [
-        { color: '--slot-1', label: '항공기 포함', exact: 'ANDENO', scale: 0.001 },
-        { color: '--slot-2', label: '항공기 제외(근원)', exact: 'NEWORDER', scale: 0.001 },
-      ] },
-      { sub: 'manufacturing', id: 'dg-ratio', title: '수주잔고 · 재고 / 출하', table: MFG_M, unit: '개월', digits: 2, defs: [
-        { color: '--slot-1', label: '수주잔고/출하', exact: 'AMDMUO', div: 'AMDMVS' },
-        { color: '--slot-2', label: '재고/출하', exact: 'AMDMTI', div: 'AMDMVS' },
-      ], note: '월 출하액 대비 몇 개월치인지' },
       { sub: 'manufacturing', id: 'dg-industry', title: '업종별 수주 전년비', table: MFG_M, unit: '%', digits: 1, defs: [
         { color: '--slot-1', label: '컴퓨터·전자', exact: 'A34SNO', transform: 'yoy' },
         { color: '--slot-2', label: '기계', exact: 'A33SNO', transform: 'yoy' },
@@ -428,11 +416,6 @@ const PAGES = {
         { color: '--slot-4', label: '1차 금속', exact: 'A31SNO', transform: 'yoy' },
         { color: '--slot-5', label: '금속가공', exact: 'A32SNO', transform: 'yoy' },
       ] },
-      { sub: 'manufacturing', id: 'dg-transport', title: '운송장비 · 항공기 수주', table: MFG_M, unit: '십억 달러', digits: 1, defs: [
-        { color: '--slot-1', label: '운송장비', exact: 'A36SNO', scale: 0.001 },
-        { color: '--slot-2', label: '민간 항공기', exact: 'ANAPNO', scale: 0.001 },
-        { color: '--slot-3', label: '국방 항공기', exact: 'ADAPNO', scale: 0.001 },
-      ], note: '민간 항공기 수주(보잉 등)가 헤드라인 변동의 주원인' },
     ],
     panels: [
       { sub: 'manufacturing', id: 'm3-table2', title: '업종별 신규 수주 변동률 (Census M3 Table 2, 계절조정)', table: MFG_M,
@@ -834,7 +817,7 @@ function buildPages() {
   for (const [id, cfg] of Object.entries(PAGES)) {
     // 만기 버튼이 있는 차트 옆 칸에는 같은 높이의 빈 줄을 넣어 차트 위치를 맞춘다.
     const cell = (c, list) => `
-      <div>
+      <div${c.wide ? ' class="wide"' : ''}>
         <h2>${c.title}</h2>
         ${c.tenors ? '<div class="filters"><span class="label">만기</span><div class="seg" id="tenors"></div></div>'
           : list.some((x) => x.tenors) ? '<div class="filters filters-spacer"></div>' : ''}
