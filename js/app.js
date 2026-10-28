@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261028n';
+const VERSION = '20261028o';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -443,10 +443,10 @@ const PAGES = {
       ...[['CC', '신용카드'], ['STUDENT_LOAN', '학자금'], ['AUTO', '자동차'], ['MORTGAGE', '모기지'], ['HELOC', 'HELOC']].map(([code, name], i) => ({
         sub: 'hhdc', heading: i === 0 ? '연체잔액비중 : 상품별' : undefined, id: `hh-product-${code.toLowerCase()}`,
         title: `${name}: 연체 비중 · 전이율`, table: HHDC_Q, unit: '%', digits: 2, defs: [
-          { color: '--slot-1', label: '90일+ 연체 비중', exact: `P12_${code}` },
-          { color: '--slot-2', label: '신규 연체 전이율(30일+)', exact: `P13_${code}` },
-          { color: '--slot-3', label: '신규 심각 연체 전이율(90일+)', exact: `P14_${code}` },
-        ],
+          { color: '--slot-1', label: '90일+ 비중', exact: `P12_${code}` },
+          { color: '--slot-2', label: '신규 30일+', exact: `P13_${code}` },
+          { color: '--slot-3', label: '신규 90일+', exact: `P14_${code}` },
+        ], note: '90일+ 비중 = 90일 이상 연체 잔액 비중, 신규 30일+/90일+ = 신규 연체·심각 연체 전이율 (연율)',
       })),
       { sub: 'hhdc', heading: '전이율 : 연령대별', id: 'hh-cc-age', title: '카드 90일+ 전이율: 연령대별', table: HHDC_Q, unit: '%', digits: 1, defs: [
         { color: '--slot-1', label: '18-29', exact: 'P27_18_29' },
