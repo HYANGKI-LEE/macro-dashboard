@@ -44,3 +44,22 @@ ids_extra = [
     'M2SL', # M2
     'SP500', # S&P 500 (FRED는 최근 10년만 제공)
 ]
+
+# 내구재 주문 - Census M3 (기업/생산 > 제조업). DGORDER, NEWORDER 는 us_macro.py 에 있음
+ids_durable = [
+    'ADXTNO', # Manufacturers' New Orders: Durable Goods Excluding Transportation
+    'ADXDNO', # Manufacturers' New Orders: Durable Goods Excluding Defense
+    'ANDENO', # Manufacturers' New Orders: Nondefense Capital Goods
+    'ANXAVS', # Manufacturers' Value of Shipments: Nondefense Capital Goods Excluding Aircraft
+    'AMDMUO', # Manufacturers' Unfilled Orders: Durable Goods
+    'AMDMVS', # Manufacturers' Value of Shipments: Durable Goods
+    'AMDMTI', # Manufacturers' Total Inventories: Durable Goods
+    'A34SNO', # Manufacturers' New Orders: Computers and Electronic Products
+    'A33SNO', # Manufacturers' New Orders: Machinery
+    'A35SNO', # Manufacturers' New Orders: Electrical Equipment, Appliances and Components
+    'A31SNO', # Manufacturers' New Orders: Primary Metals
+    'A32SNO', # Manufacturers' New Orders: Fabricated Metal Products
+    'A36SNO', # Manufacturers' New Orders: Transportation Equipment
+    'ANAPNO', # Manufacturers' New Orders: Nondefense Aircraft and Parts
+    'ADAPNO', # Manufacturers' New Orders: Defense Aircraft and Parts
+]

@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261027d';
+const VERSION = '20261028a';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -19,7 +19,8 @@ const freqOf = (table) => table.split('_')[1];
 // table: 이 시리즈만 다른 DB에서 가져올 때 (기본은 차트의 table).
 // 색: key → css의 --s-<key>(국가 색), color → css 토큰 직접 지정, other → 회색 선(dash로 구분).
 // hidden: 기본으로 숨김(범례 클릭으로 표시), step: 계단식 선, since: 이 연도부터만 사용,
-// monthly: 일별 값을 월별(그 달 마지막 값)로 바꿈, transform: 'diff' → 전기 대비 증감, 'yoy' → 전년동기비(%).
+// monthly: 일별 값을 월별(그 달 마지막 값)로 바꿈, transform: 'diff' → 전기 대비 증감, 'yoy' → 전년동기비(%), 'mom' → 전기비(%).
+// div: 같은 DB의 다른 칼럼으로 나눔(비율), scale: 값에 곱함(예: 0.001 → 백만 달러를 십억 달러로).
 // calc: 여러 칼럼을 분기 단위로 맞춰 계산 { inputs: [Q(칼럼, DB, 'last'|'mean')], fn: (a, b, ...) => 값 },
 // shiftYears: 날짜를 N년 뒤로 옮김(선행 지표), right: 오른쪽 축(차트의 unit2),
 // indexTo: 'YYYY-MM-DD' 그 날짜 값을 100으로 한 지수.
@@ -332,10 +333,60 @@ const PAGES = {
       ] },
     ],
   },
+  // 기업/생산: 제조업 = Census M3 내구재 주문 (FRED 월별, 계절조정)
+  business: {
+    group: 'us',
+    title: '기업/생산',
+    desc: 'FRED 월별 데이터 기준. 제조업: Census 내구재 주문(M3) — 수주·출하·재고 모두 계절조정 금액(백만 달러)에서 계산.',
+    subtabs: [['manufacturing', '제조업']],
+    cols: 3,
+    defaultPeriod: 's2020',
+    charts: [
+      { sub: 'manufacturing', id: 'dg-mom', title: '내구재 수주 전월비', table: FRED_M, unit: '%', digits: 1, bar: true, defs: [
+        { color: '--slot-1', label: '내구재', exact: 'DGORDER', transform: 'mom' },
+        { color: '--slot-2', label: '운송 제외', exact: 'ADXTNO', transform: 'mom' },
+        { color: '--slot-3', label: '근원 자본재', exact: 'NEWORDER', transform: 'mom' },
+      ], note: '근원 자본재 = 비국방 자본재(항공기 제외)' },
+      { sub: 'manufacturing', id: 'dg-yoy', title: '내구재 수주 전년비', table: FRED_M, unit: '%', digits: 1, defs: [
+        { color: '--slot-1', label: '내구재', exact: 'DGORDER', transform: 'yoy' },
+        { color: '--slot-2', label: '운송 제외', exact: 'ADXTNO', transform: 'yoy' },
+        { color: '--slot-3', label: '국방 제외', exact: 'ADXDNO', transform: 'yoy' },
+      ] },
+      { sub: 'manufacturing', id: 'dg-core', title: '근원 자본재 수주 · 출하 (YoY)', table: FRED_M, unit: '%', digits: 1, defs: [
+        { color: '--slot-1', label: '수주', exact: 'NEWORDER', transform: 'yoy' },
+        { color: '--slot-2', label: '출하', exact: 'ANXAVS', transform: 'yoy' },
+      ], note: '수주는 설비투자 선행, 출하는 GDP 장비투자 추정에 쓰임' },
+      { sub: 'manufacturing', id: 'dg-level', title: '내구재 수주 금액', table: FRED_M, unit: '십억 달러', digits: 1, defs: [
+        { color: '--slot-1', label: '내구재', exact: 'DGORDER', scale: 0.001 },
+        { color: '--slot-2', label: '운송 제외', exact: 'ADXTNO', scale: 0.001 },
+        { color: '--slot-3', label: '근원 자본재', exact: 'NEWORDER', scale: 0.001 },
+      ] },
+      { sub: 'manufacturing', id: 'dg-capital', title: '비국방 자본재 수주: 항공기 포함 vs 제외', table: FRED_M, unit: '십억 달러', digits: 1, defs: [
+        { color: '--slot-1', label: '항공기 포함', exact: 'ANDENO', scale: 0.001 },
+        { color: '--slot-2', label: '항공기 제외(근원)', exact: 'NEWORDER', scale: 0.001 },
+      ] },
+      { sub: 'manufacturing', id: 'dg-ratio', title: '수주잔고 · 재고 / 출하', table: FRED_M, unit: '개월', digits: 2, defs: [
+        { color: '--slot-1', label: '수주잔고/출하', exact: 'AMDMUO', div: 'AMDMVS' },
+        { color: '--slot-2', label: '재고/출하', exact: 'AMDMTI', div: 'AMDMVS' },
+      ], note: '월 출하액 대비 몇 개월치인지' },
+      { sub: 'manufacturing', id: 'dg-industry', title: '업종별 수주 전년비', table: FRED_M, unit: '%', digits: 1, defs: [
+        { color: '--slot-1', label: '컴퓨터·전자', exact: 'A34SNO', transform: 'yoy' },
+        { color: '--slot-2', label: '기계', exact: 'A33SNO', transform: 'yoy' },
+        { color: '--slot-3', label: '전기장비', exact: 'A35SNO', transform: 'yoy' },
+        { color: '--slot-4', label: '1차 금속', exact: 'A31SNO', transform: 'yoy' },
+        { color: '--slot-5', label: '금속가공', exact: 'A32SNO', transform: 'yoy' },
+      ] },
+      { sub: 'manufacturing', id: 'dg-transport', title: '운송장비 · 항공기 수주', table: FRED_M, unit: '십억 달러', digits: 1, defs: [
+        { color: '--slot-1', label: '운송장비', exact: 'A36SNO', scale: 0.001 },
+        { color: '--slot-2', label: '민간 항공기', exact: 'ANAPNO', scale: 0.001 },
+        { color: '--slot-3', label: '국방 항공기', exact: 'ADAPNO', scale: 0.001 },
+      ], note: '민간 항공기 수주(보잉 등)가 헤드라인 변동의 주원인' },
+    ],
+  },
 };
 
 // ===== 상태 =====
-const state = { data: {}, page: 'rates', sub: { rates: 'main' }, period: {}, tenor: 10, legend: {}, ready: {} };
+const state = { data: {}, page: 'rates', sub: { rates: 'main', business: 'manufacturing' }, period: {}, tenor: 10, legend: {}, ready: {} };
 const charts = {};
 
 // ===== 유틸 =====
@@ -418,12 +469,21 @@ function valuesOf(table, def) {
     dates = [...byMonth.keys()];
     vals = [...byMonth.values()];
   }
+  if (def.div) {
+    const den = table.cols[def.div];
+    if (!den) return null;
+    vals = vals.map((v, i) => (v !== null && den[i] ? v / den[i] : null));
+  }
+  if (def.scale) vals = vals.map((v) => (v === null ? null : v * def.scale));
   if (def.since) {
     const from = Date.UTC(def.since, 0, 1);
     vals = vals.map((v, i) => (dates[i] < from ? null : v));
   }
   if (def.transform === 'diff') {
     vals = vals.map((v, i) => (i > 0 && v !== null && vals[i - 1] !== null ? v - vals[i - 1] : null));
+  }
+  if (def.transform === 'mom') {
+    vals = vals.map((v, i) => (i > 0 && v !== null && vals[i - 1] ? (v / vals[i - 1] - 1) * 100 : null));
   }
   if (def.transform === 'yoy') {
     const at = new Map(dates.map((t, i) => [t, vals[i]]));
