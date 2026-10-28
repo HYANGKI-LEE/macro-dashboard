@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261028j';
+const VERSION = '20261028k';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -441,10 +441,12 @@ const PAGES = {
         { color: '--slot-2', label: '근원 자본재', exact: 'ANXAUO', transform: 'yoy' },
         { color: '--slot-3', label: '민간 항공기', exact: 'ANAPUO', transform: 'yoy' },
       ], note: '앞으로 생산할 일감. 늘면 생산 둔화를 막아주고, 줄면 경기 둔화 신호' },
-      { sub: 'manufacturing', id: 'dg-us', title: '수주잔고 / 출하 비율', table: MFG_M, unit: '개월', digits: 2, defs: [
-        { color: '--slot-1', label: '제조업 전체', exact: 'AMTMUS' },
-        { color: '--slot-2', label: '내구재', exact: 'AMDMUS' },
-      ], note: '쌓인 주문이 월 출하액의 몇 개월치인지' },
+      { sub: 'manufacturing', id: 'dg-us', title: '수주잔고 / 출하 비율', table: MFG_M, unit: '개월', unit2: '개월', digits: 2, defs: [
+        { color: '--slot-1', label: '내구재', exact: 'AMDMUS' },
+        { color: '--slot-2', label: '운송장비(우)', exact: 'A36SUS', right: true },
+        { color: '--slot-3', label: '기계', exact: 'A33SUS' },
+        { color: '--slot-4', label: '컴퓨터·전자', exact: 'A34SUS' },
+      ], note: '쌓인 주문이 월 출하액의 몇 개월치인지. 수주잔고는 내구재만 집계돼 제조업 전체 = 내구재. 운송장비(항공기 잔고)는 오른쪽 축' },
       { sub: 'manufacturing', id: 'dg-gap', title: '신규 수주 − 재고 증가율 (YoY)', table: MFG_M, unit: '%p', digits: 1, defs: [
         { color: '--slot-1', label: '제조업 전체', exact: 'AMTMNO', minus: 'AMTMTI', transform: 'yoy' },
         { color: '--slot-2', label: '내구재', exact: 'DGORDER', minus: 'AMDMTI', transform: 'yoy' },
