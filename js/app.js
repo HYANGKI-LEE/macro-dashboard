@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261028k';
+const VERSION = '20261028l';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -228,26 +228,27 @@ const PAGES = {
     title: '신용',
     desc: 'FRED 분기 데이터 기준 (엑셀 Main(분기) 신용 차트). 기준금리는 실효 연방기금금리 분기 평균(오른쪽 축). '
       + 'HY 스프레드·수익률과 주요 상업은행(Citi·JPM 등) 카드 데이터는 아직 DB에 없어 뺐어요. GDP·투자 차트는 제외.',
+    subtabs: [['leverage', '레버리지'], ['delinq', '연체율'], ['sloos', 'SLOOS']],
     cols: 3,
     defaultPeriod: 's2000',
     charts: [
       // --- 대출태도 (SLOOS) ---
-      { id: 'cr-sloos-ci', title: 'SLOOS 대출기준 강화: C&I', table: FRED_Q, unit: '%p', unit2: '%', digits: 1, defs: [
+      { sub: 'sloos', id: 'cr-sloos-ci', title: 'SLOOS 대출기준 강화: C&I', table: FRED_Q, unit: '%p', unit2: '%', digits: 1, defs: [
         { color: '--slot-1', label: '대·중견기업', exact: 'DRTSCILM' },
         { color: '--slot-2', label: '소기업', exact: 'DRTSCIS' },
         FFR_Q,
       ] },
-      { id: 'cr-sloos-ci2', title: 'SLOOS 대출기준 강화: C&I (금리 제외)', table: FRED_Q, unit: '%p', digits: 1, defs: [
+      { sub: 'sloos', id: 'cr-sloos-ci2', title: 'SLOOS 대출기준 강화: C&I (금리 제외)', table: FRED_Q, unit: '%p', digits: 1, defs: [
         { color: '--slot-1', label: '대·중견기업', exact: 'DRTSCILM' },
         { color: '--slot-2', label: '소기업', exact: 'DRTSCIS' },
       ] },
-      { id: 'cr-sloos-mix', title: 'SLOOS 대출기준 강화: 기업·소비자', table: FRED_Q, unit: '%p', digits: 1, defs: [
+      { sub: 'sloos', id: 'cr-sloos-mix', title: 'SLOOS 대출기준 강화: 기업·소비자', table: FRED_Q, unit: '%p', digits: 1, defs: [
         { color: '--slot-1', label: 'C&I 대·중견', exact: 'DRTSCILM' },
         { color: '--slot-2', label: 'C&I 소기업', exact: 'DRTSCIS' },
         { color: '--slot-3', label: '신용카드', exact: 'DRTSCLCC' },
         { color: '--slot-4', label: '오토론', exact: 'STDSAUTO' },
       ] },
-      { id: 'cr-sloos-all', title: 'SLOOS 대출기준 강화: 전체', table: FRED_Q, unit: '%p', digits: 1, defs: [
+      { sub: 'sloos', id: 'cr-sloos-all', title: 'SLOOS 대출기준 강화: 전체', table: FRED_Q, unit: '%p', digits: 1, defs: [
         { color: '--slot-1', label: 'C&I 대·중견', exact: 'DRTSCILM' },
         { color: '--slot-2', label: 'C&I 소기업', exact: 'DRTSCIS' },
         { color: '--slot-3', label: '신용카드', exact: 'DRTSCLCC' },
@@ -256,54 +257,54 @@ const PAGES = {
         { color: '--slot-6', label: 'CRE 건설·개발', exact: 'SUBLPDRCSC' },
         { color: '--slot-7', label: 'CRE 다가구', exact: 'SUBLPDRCSM' },
       ] },
-      { id: 'cr-sloos-cre', title: 'SLOOS 대출기준 강화: CRE', table: FRED_Q, unit: '%p', digits: 1, defs: [
+      { sub: 'sloos', id: 'cr-sloos-cre', title: 'SLOOS 대출기준 강화: CRE', table: FRED_Q, unit: '%p', digits: 1, defs: [
         { color: '--slot-1', label: '건설·개발', exact: 'SUBLPDRCSC' },
         { color: '--slot-2', label: '다가구', exact: 'SUBLPDRCSM' },
         { color: '--slot-3', label: '비농업 비주거', exact: 'SUBLPDRCSN' },
       ] },
       // --- 연체율 ---
-      { id: 'cr-dq-mix', title: '연체율: 가계·기업·카드', table: FRED_Q, unit: '%', unit2: '%', defs: [
+      { sub: 'delinq', id: 'cr-dq-mix', title: '연체율: 가계·기업·카드', table: FRED_Q, unit: '%', unit2: '%', defs: [
         { color: '--slot-1', label: '가계대출', exact: 'DRCLACBS' },
         { color: '--slot-2', label: '기업대출', exact: 'DRBLACBS' },
         { color: '--slot-3', label: '신용카드', exact: 'DRCCLACBS' },
         FFR_Q,
       ] },
-      { id: 'cr-dq-bizcard', title: '연체율: 기업·카드 · 기준금리', table: FRED_Q, unit: '%', unit2: '%', defs: [
+      { sub: 'delinq', id: 'cr-dq-bizcard', title: '연체율: 기업·카드 · 기준금리', table: FRED_Q, unit: '%', unit2: '%', defs: [
         { color: '--slot-1', label: '기업대출', exact: 'DRBLACBS' },
         { color: '--slot-3', label: '신용카드', exact: 'DRCCLACBS' },
         FFR_Q,
       ], note: '엑셀의 HY 스프레드 선은 DB에 없어 뺐어요.' },
-      { id: 'cr-dq-mortgage', title: '연체율: 주택담보대출', table: FRED_Q, unit: '%', unit2: '%', defs: [
+      { sub: 'delinq', id: 'cr-dq-mortgage', title: '연체율: 주택담보대출', table: FRED_Q, unit: '%', unit2: '%', defs: [
         { color: '--slot-1', label: '모기지', exact: 'DRSFRMACBS' },
         FFR_Q,
       ] },
-      { id: 'cr-dq-business', title: '연체율: 기업대출', table: FRED_Q, unit: '%', unit2: '%', defs: [
+      { sub: 'delinq', id: 'cr-dq-business', title: '연체율: 기업대출', table: FRED_Q, unit: '%', unit2: '%', defs: [
         { color: '--slot-1', label: '기업대출', exact: 'DRBLACBS' },
         FFR_Q,
       ] },
-      { id: 'cr-dq-card', title: '연체율: 신용카드', table: FRED_Q, unit: '%', unit2: '%', defs: [
+      { sub: 'delinq', id: 'cr-dq-card', title: '연체율: 신용카드', table: FRED_Q, unit: '%', unit2: '%', defs: [
         { color: '--slot-1', label: '신용카드', exact: 'DRCCLACBS' },
         FFR_Q,
       ] },
-      { id: 'cr-dq-cre', title: 'CRE 연체율: 대형 vs 소형 은행', table: FRED_Q, unit: '%', defs: [
+      { sub: 'delinq', id: 'cr-dq-cre', title: 'CRE 연체율: 대형 vs 소형 은행', table: FRED_Q, unit: '%', defs: [
         { color: '--slot-1', label: '대형(상위 100)', exact: 'DRCRELEXFT100S' },
         { color: '--slot-2', label: '소형', exact: 'DRCRELEXFOBS' },
       ] },
-      { id: 'cr-dq-curve', title: '기업대출 연체율 vs 10Y-2Y(2년 선행)', table: FRED_Q, unit: '%', unit2: '%p', defs: [
+      { sub: 'delinq', id: 'cr-dq-curve', title: '기업대출 연체율 vs 10Y-2Y(2년 선행)', table: FRED_Q, unit: '%', unit2: '%p', defs: [
         { color: '--slot-1', label: '기업대출 연체율', exact: 'DRBLACBS' },
         { color: '--slot-2', label: '10Y-2Y (2년 선행)', right: true, shiftYears: 2, calc: { inputs: [Q('T10Y2Y', FRED_D, 'mean')], fn: (x) => x } },
       ], note: '10Y-2Y는 분기 평균을 2년 뒤로 옮겨 그렸어요.' },
-      { id: 'cr-dq-burden', title: '카드 연체율 · 모기지 부담', table: FRED_Q, unit: '%', unit2: '%', defs: [
+      { sub: 'delinq', id: 'cr-dq-burden', title: '카드 연체율 · 모기지 부담', table: FRED_Q, unit: '%', unit2: '%', defs: [
         { color: '--slot-1', label: '신용카드 연체율', exact: 'DRCCLACBS' },
         { color: '--slot-2', label: '모기지 상환/가처분소득', exact: 'MDSP' },
         FFR_Q,
       ] },
       // --- 상각률 ---
-      { id: 'cr-co-cre', title: '상각률: CRE · 부동산', table: FRED_Q, unit: '%', defs: [
+      { sub: 'delinq', id: 'cr-co-cre', title: '상각률: CRE · 부동산', table: FRED_Q, unit: '%', defs: [
         { color: '--slot-1', label: 'CRE', exact: 'CORCREXFACBS' },
         { color: '--slot-2', label: '부동산 담보', exact: 'CORSREACBS' },
       ] },
-      { id: 'cr-co-all', title: '상각률: 대출 종류별', table: FRED_Q, unit: '%', unit2: '%', defs: [
+      { sub: 'delinq', id: 'cr-co-all', title: '상각률: 대출 종류별', table: FRED_Q, unit: '%', unit2: '%', defs: [
         { color: '--slot-1', label: '기업대출', exact: 'CORBLACBS' },
         { color: '--slot-2', label: 'CRE', exact: 'CORCREXFACBS' },
         { color: '--slot-3', label: '리스', exact: 'CORLFRACBS' },
@@ -311,84 +312,84 @@ const PAGES = {
         FFR_Q,
       ] },
       // --- 부채 ---
-      { id: 'cr-debt-gdp', title: '기업·가계 부채 / GDP', table: FRED_Q, unit: '%', digits: 1, defs: [
+      { sub: 'leverage', id: 'cr-debt-gdp', title: '기업·가계 부채 / GDP', table: FRED_Q, unit: '%', digits: 1, defs: [
         { color: '--slot-1', label: '비금융기업', calc: { inputs: [Q('BCNSDODNS'), Q('GDP')], fn: (d, g) => d / (g * 1000) * 100 } },
         { color: '--slot-2', label: '가계', calc: { inputs: [Q('CMDEBT'), Q('GDP')], fn: (d, g) => d / (g * 1000) * 100 } },
       ] },
-      { id: 'cr-debt-corp', title: '기업 부채/GDP · 부채/자기자본', table: FRED_Q, unit: '%', unit2: '%', digits: 1, defs: [
+      { sub: 'leverage', id: 'cr-debt-corp', title: '기업 부채/GDP · 부채/자기자본', table: FRED_Q, unit: '%', unit2: '%', digits: 1, defs: [
         { color: '--slot-1', label: '부채/GDP', calc: { inputs: [Q('BCNSDODNS'), Q('GDP')], fn: (d, g) => d / (g * 1000) * 100 } },
         { color: '--slot-2', label: '부채/자기자본(우)', exact: 'NCBCMDPMVCE', right: true },
       ] },
-      { id: 'cr-capex-ci', title: 'CapEx · C&I 대출 / GDP', table: FRED_Q, unit: '%', unit2: '%', digits: 1, defs: [
+      { sub: 'leverage', id: 'cr-capex-ci', title: 'CapEx · C&I 대출 / GDP', table: FRED_Q, unit: '%', unit2: '%', digits: 1, defs: [
         { color: '--slot-1', label: '비금융기업 CapEx', calc: { inputs: [Q('BOGZ1FA105050005Q'), Q('GDP')], fn: (c, g) => c / (g * 1000) * 100 } },
         { color: '--slot-2', label: 'C&I 대출(우)', right: true, calc: { inputs: [Q('TOTCI', FRED_W, 'mean'), Q('GDP')], fn: (c, g) => c / g * 100 } },
       ] },
-      { id: 'cr-debt-hh', title: '가계 부채: GDP · 소득 대비', table: FRED_Q, unit: '%', unit2: '%', digits: 1, defs: [
+      { sub: 'leverage', id: 'cr-debt-hh', title: '가계 부채: GDP · 소득 대비', table: FRED_Q, unit: '%', unit2: '%', digits: 1, defs: [
         { color: '--slot-1', label: '부채/GDP', calc: { inputs: [Q('CMDEBT'), Q('GDP')], fn: (d, g) => d / (g * 1000) * 100 } },
         { color: '--slot-2', label: '부채/개인소득', calc: { inputs: [Q('CMDEBT'), Q('PINCOME')], fn: (d, i) => d / (i * 1000) * 100 } },
         { color: '--slot-3', label: '부채상환/가처분소득(우)', exact: 'TDSP', right: true },
       ] },
-      { id: 'cr-dsr', title: '가계 부채상환 부담 / 가처분소득', table: FRED_Q, unit: '%', defs: [
+      { sub: 'leverage', id: 'cr-dsr', title: '가계 부채상환 부담 / 가처분소득', table: FRED_Q, unit: '%', defs: [
         { color: '--slot-1', label: '모기지', exact: 'MDSP' },
         { color: '--slot-2', label: '소비자 부채', exact: 'CDSP' },
       ] },
-      { id: 'cr-debt-equity', title: '비금융기업 부채/자기자본', table: FRED_Q, unit: '%', digits: 1, defs: [
+      { sub: 'leverage', id: 'cr-debt-equity', title: '비금융기업 부채/자기자본', table: FRED_Q, unit: '%', digits: 1, defs: [
         { color: '--slot-1', label: '부채/자기자본(시가)', exact: 'NCBCMDPMVCE' },
       ], note: '엑셀의 US HY 수익률·WAM 선은 DB에 없어 뺐어요.' },
       // --- 가계 재무 ---
-      { id: 'hh-assets', title: '가계 자산 구성 (총자산 대비)', table: FRED_Q, unit: '%', digits: 1, defs: [
+      { sub: 'leverage', id: 'hh-assets', title: '가계 자산 구성 (총자산 대비)', table: FRED_Q, unit: '%', digits: 1, defs: [
         { color: '--slot-1', label: '부동산', calc: { inputs: [Q('HOOREVLMHMV'), Q('BOGZ1FL192000005Q')], fn: (a, t) => a / t * 100 } },
         { color: '--slot-2', label: '예금', calc: { inputs: [Q('BOGZ1FL193020005Q'), Q('BOGZ1FL193030205Q'), Q('BOGZ1FL193034005Q'), Q('BOGZ1FL192000005Q')], fn: (a, b, c, t) => (a + b + c) / t * 100 } },
         { color: '--slot-3', label: '채권', calc: { inputs: [Q('BOGZ1LM194022005Q'), Q('BOGZ1FL192000005Q')], fn: (a, t) => a / t * 100 } },
         { color: '--slot-4', label: '주식', calc: { inputs: [Q('BOGZ1LM193064005Q'), Q('BOGZ1FL192000005Q')], fn: (a, t) => a / t * 100 } },
       ], note: '예금 = 요구불·현금 + 저축성 예금 + MMF' },
-      { id: 'hh-cash-wage', title: '가계 현금성 자산 · 임금 상승률', table: FRED_Q, unit: '십억 달러', unit2: '%', digits: 0, defs: [
+      { sub: 'leverage', id: 'hh-cash-wage', title: '가계 현금성 자산 · 임금 상승률', table: FRED_Q, unit: '십억 달러', unit2: '%', digits: 0, defs: [
         { color: '--slot-1', label: '요구불예금·현금', calc: { inputs: [Q('BOGZ1FL193020005Q')], fn: (a) => a / 1000 } },
         { color: '--slot-2', label: 'Wage Tracker(우)', right: true, calc: { inputs: [Q('FRBATLWGT3MMAUMHWGO', FRED_M)], fn: (a) => a } },
       ] },
-      { id: 'hh-networth', title: '가계 순자산 / 가처분소득', table: FRED_Q, unit: '배', digits: 2, defs: [
+      { sub: 'leverage', id: 'hh-networth', title: '가계 순자산 / 가처분소득', table: FRED_Q, unit: '배', digits: 2, defs: [
         { color: '--slot-1', label: '순자산/가처분소득', calc: { inputs: [Q('BOGZ1FL192090005Q'), Q('DPI')], fn: (n, d) => n / (d * 1000) } },
       ] },
-      { id: 'hh-networth-saving', title: '가계 순자산/소득 · 저축률', table: FRED_Q, unit: '배', unit2: '%', digits: 2, defs: [
+      { sub: 'leverage', id: 'hh-networth-saving', title: '가계 순자산/소득 · 저축률', table: FRED_Q, unit: '배', unit2: '%', digits: 2, defs: [
         { color: '--slot-1', label: '순자산/가처분소득', calc: { inputs: [Q('BOGZ1FL192090005Q'), Q('DPI')], fn: (n, d) => n / (d * 1000) } },
         { color: '--slot-2', label: '저축률(우)', exact: 'A072RC1Q156SBEA', right: true },
       ] },
       // --- 자산 분포 ---
-      { id: 'dist-share', title: '자산 그룹별 총자산 비중', table: FRED_Q, unit: '%', digits: 1, defs: [
+      { sub: 'leverage', id: 'dist-share', title: '자산 그룹별 총자산 비중', table: FRED_Q, unit: '%', digits: 1, defs: [
         { color: '--slot-1', label: '상위 1%', exact: 'WFRBST01108' },
         { color: '--slot-2', label: '상위 1~10%', exact: 'WFRBSN09135' },
         { color: '--slot-3', label: '상위 10~50%', exact: 'WFRBSN40162' },
         { color: '--slot-4', label: '하위 50%', exact: 'WFRBSB50189' },
       ] },
-      { id: 'dist-share-change', title: '총자산 비중 변동: 2010.2Q vs 최근', table: FRED_Q, unit: '%', digits: 1, compare: { base: '2010-04-01' }, defs: [
+      { sub: 'leverage', id: 'dist-share-change', title: '총자산 비중 변동: 2010.2Q vs 최근', table: FRED_Q, unit: '%', digits: 1, compare: { base: '2010-04-01' }, defs: [
         { label: '상위 1%', exact: 'WFRBST01108' },
         { label: '상위 1~10%', exact: 'WFRBSN09135' },
         { label: '상위 10~50%', exact: 'WFRBSN40162' },
         { label: '하위 50%', exact: 'WFRBSB50189' },
       ], note: '엑셀은 2025.2Q 고정, 여기선 최근 분기와 비교해요.' },
-      { id: 'dist-fin-assets', title: '그룹별 금융자산 추이 (2020.1Q=100)', table: FRED_Q, unit: '', digits: 1, defs: [
+      { sub: 'leverage', id: 'dist-fin-assets', title: '그룹별 금융자산 추이 (2020.1Q=100)', table: FRED_Q, unit: '', digits: 1, defs: [
         { color: '--slot-1', label: '상위 1%', exact: 'WFRBLT01004', indexTo: '2020-01-01' },
         { color: '--slot-2', label: '상위 1~10%', exact: 'WFRBLN09031', indexTo: '2020-01-01' },
         { color: '--slot-3', label: '상위 10~50%', exact: 'WFRBLN40058', indexTo: '2020-01-01' },
         { color: '--slot-4', label: '하위 50%', exact: 'WFRBLB50085', indexTo: '2020-01-01' },
       ] },
       // --- 기타 ---
-      { id: 'etc-wage-q', title: '분위별 주간 임금 상승률 (YoY)', table: FRED_Q, unit: '%', digits: 1, defs: [
+      { sub: 'leverage', id: 'etc-wage-q', title: '분위별 주간 임금 상승률 (YoY)', table: FRED_Q, unit: '%', digits: 1, defs: [
         { color: '--slot-1', label: '1분위', exact: 'LEU0252916100Q', transform: 'yoy' },
         { color: '--slot-2', label: '2분위(중위)', exact: 'LEU0252887700Q', transform: 'yoy' },
         { color: '--slot-3', label: '3분위', exact: 'LEU0252916200Q', transform: 'yoy' },
         { color: '--slot-4', label: '상위 10%', exact: 'LEU0252916300Q', transform: 'yoy' },
       ] },
-      { id: 'etc-capex-index', title: 'CapEx · 소매판매 · 고용 (2021.1Q=100)', table: FRED_Q, unit: '', digits: 1, defs: [
+      { sub: 'leverage', id: 'etc-capex-index', title: 'CapEx · 소매판매 · 고용 (2021.1Q=100)', table: FRED_Q, unit: '', digits: 1, defs: [
         { color: '--slot-1', label: '비금융기업 CapEx', calc: { inputs: [Q('BOGZ1FA105050005Q')], fn: (a) => a }, indexTo: '2021-01-01' },
         { color: '--slot-2', label: '소매판매', calc: { inputs: [Q('RSAFS', FRED_M)], fn: (a) => a }, indexTo: '2021-01-01' },
         { color: '--slot-3', label: '비농업 고용', calc: { inputs: [Q('PAYEMS', FRED_M)], fn: (a) => a }, indexTo: '2021-01-01' },
       ], note: '소매판매·고용은 분기 마지막 달 값' },
-      { id: 'etc-m2-spx', title: 'M2 · S&P500', table: FRED_Q, unit: '십억 달러', unit2: 'pt', digits: 0, defs: [
+      { sub: 'leverage', id: 'etc-m2-spx', title: 'M2 · S&P500', table: FRED_Q, unit: '십억 달러', unit2: 'pt', digits: 0, defs: [
         { color: '--slot-1', label: 'M2', calc: { inputs: [Q('M2SL', FRED_M)], fn: (a) => a } },
         { color: '--slot-2', label: 'S&P500(우)', right: true, calc: { inputs: [Q('SP500', FRED_D)], fn: (a) => a } },
       ], note: 'FRED S&P500은 최근 10년치만 제공돼요. 분기 마지막 값' },
-      { id: 'etc-pce', title: '명목 PCE 증가율 (YoY)', table: FRED_Q, unit: '%', digits: 1, defs: [
+      { sub: 'leverage', id: 'etc-pce', title: '명목 PCE 증가율 (YoY)', table: FRED_Q, unit: '%', digits: 1, defs: [
         { color: '--slot-1', label: 'PCE', exact: 'PCEC', transform: 'yoy' },
       ] },
     ],
@@ -472,7 +473,7 @@ const PAGES = {
 
 // ===== 상태 =====
 // panel: 패널 id → { mode: 'mom'|'yoy', slots: Map(티커 → 색 번호) }
-const state = { data: {}, page: 'rates', sub: { rates: 'main', business: 'manufacturing' }, period: {}, tenor: 10, legend: {}, ready: {}, panel: {} };
+const state = { data: {}, page: 'rates', sub: { rates: 'main', business: 'manufacturing', credit: 'leverage' }, period: {}, tenor: 10, legend: {}, ready: {}, panel: {} };
 const charts = {};
 
 // ===== 유틸 =====
