@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261030m';
+const VERSION = '20261030n';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -889,7 +889,7 @@ const PAGES = {
 // ===== 상태 =====
 // panel: 패널 id → { mode: 'mom'|'yoy', slots: Map(티커 → 색 번호) }
 // nipa: 발표표 id → { mode: 'yoy'|'qoqa'|'raw', collapsed: Set(접은 줄 번호) }
-const state = { data: {}, page: 'rates', sub: { rates: 'main', gdp: 'chg', flow: 'hh', credit: 'leverage' }, period: {}, tenor: 10, legend: {}, ready: {}, panel: {}, nipa: {} };
+const state = { data: {}, page: NAV_ORDER[0], sub: { rates: 'main', gdp: 'chg', flow: 'hh', credit: 'leverage' }, period: {}, tenor: 10, legend: {}, ready: {}, panel: {}, nipa: {} };
 const charts = {};
 
 // ===== 유틸 =====
@@ -1432,7 +1432,7 @@ function buildPages() {
 function showPage(hash) {
   let [page, sub] = hash.split('/');
   if (page === 'growth' && sub === 'us-gdp') [page, sub] = ['gdp', 'chg'];
-  if (!PAGES[page]) page = 'rates';
+  if (!PAGES[page]) page = NAV_ORDER[0]; // 주소가 없거나 틀리면 메뉴 맨 위 페이지
   // 내용 없는 상위 메뉴(산업 등)는 첫 하위 페이지를 보여줌
   const empty = (p) => !PAGES[p].charts.length && !PAGES[p].nipa && !PAGES[p].panels;
   const firstChild = NAV_ORDER.find((p) => PAGES[p]?.parent === page);
