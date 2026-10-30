@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261030g';
+const VERSION = '20261030h';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -35,6 +35,7 @@ const LONG_DB = {
   exp_quarterly: { url: `${FRED_REPO_DB}us_macro_NIPA_Foreign_Transactions_Exports.db.gz`, obs: 'obs_quarterly' },
   imp_quarterly: { url: `${FRED_REPO_DB}us_macro_NIPA_Foreign_Transactions_Imports.db.gz`, obs: 'obs_quarterly' },
   gov_quarterly: { url: `${FRED_REPO_DB}us_macro_NIPA_Govt_Receipts_Expenditures.db.gz`, obs: 'obs_quarterly' },
+  gdi_quarterly: { url: `${FRED_REPO_DB}us_macro_NIPA_GDI.db.gz`, obs: 'obs_quarterly' },
 };
 const freqOf = (table) => table.split('_')[1];
 
@@ -247,8 +248,49 @@ const NIPA_155 = nipaRows([
   'gov:A997RC1Q027SBEA', 'gov:DGI', 'gov:FNDEFX', 'gov:A542RC1Q027SBEA', 'gov:NDGI', 'gov:SLCE',
   'gov:A991RC1Q027SBEA', 'gov:SLINV',
 ]);
-// 수준이 음수가 될 수 있어 증가율(%)이 의미 없는 줄 (재고 변동·농업·비농업, 순수출)
+// 1.5.5 에서 수준이 음수가 될 수 있어 증가율(%)이 의미 없는 줄 (재고 변동·농업·비농업, 순수출)
 const NIPA_NO_PCT = new Set([42, 43, 44, 45]);
+// 1.4.1 실질 GDP·국내총구매·최종판매 변동률. 8줄(민간 국내구매자 최종판매)이 흔히 말하는 Core GDP
+const NIPA_141 = [
+  [1, 'A191RL1Q225SBEA', 'gdp_quarterly', '국내총생산 (GDP)', 1, 'Gross domestic product'],
+  [2, 'A020RL1Q158SBEA', 'exp_quarterly', '(차감) 수출', 1, 'Less: Exports of goods and services'],
+  [3, 'A021RL1Q158SBEA', 'imp_quarterly', '(가산) 수입', 1, 'Plus: Imports of goods and services'],
+  [4, 'A712RL1Q225SBEA', 'gdp_quarterly', '= 국내총구매', 1, 'Equals: Gross domestic purchases'],
+  [5, null, null, '(차감) 재고 변동', 1, 'Less: Change in private inventories'],
+  [6, 'A713RL1Q225SBEA', 'gdp_quarterly', '= 국내구매자 최종판매', 1, 'Equals: Final sales to domestic purchasers'],
+  [7, 'A190RL1Q225SBEA', 'gdp_quarterly', '국내생산물 최종판매', 1, 'Final sales of domestic product'],
+  [8, 'PB0000031Q225SBEA', 'gdp_quarterly', '민간 국내구매자 최종판매 (Core GDP)', 1, 'Final sales to private domestic purchasers'],
+  [9, 'A712RP1Q027SBEA', 'gdp_quarterly', '국내총구매 (명목)', 1, 'Gross domestic purchases, current dollars'],
+  [10, 'A713RP1Q027SBEA', 'gdp_quarterly', '국내구매자 최종판매 (명목)', 1, 'Final sales to domestic purchasers, current dollars'],
+  [11, 'PA0000031Q225SBEA', 'gdp_quarterly', '민간 국내구매자 최종판매 (명목)', 1, 'Final sales to private domestic purchasers, current dollars'],
+];
+// 1.10 소득 측 GDP (GDI). 단계는 BEA 원표 위계
+const NIPA_110 = [
+  ['GDI', '국내총소득 (GDI)', 0, 'Gross domestic income'],
+  ['GDICOMP', '피용자보수', 1, 'Compensation of employees, paid'],
+  ['A4102C1Q027SBEA', '임금·급여', 2, 'Wages and salaries'],
+  ['W270RC1Q027SBEA', '국내 거주자', 3, 'To persons'],
+  ['B4189C1Q027SBEA', '해외 거주자', 3, 'To the rest of the world'],
+  ['A038RC1Q027SBEA', '임금 외 보수 (사회보험 등)', 2, 'Supplements to wages and salaries'],
+  ['GDITAXES', '생산·수입세', 1, 'Taxes on production and imports'],
+  ['GDISUBS', '(차감) 보조금', 1, 'Less: Subsidies'],
+  ['GDINOS', '순영업잉여', 1, 'Net operating surplus'],
+  ['W260RC1Q027SBEA', '민간 기업', 2, 'Private enterprises'],
+  ['W272RC1Q027SBEA', '순이자 등', 3, 'Net interest and miscellaneous payments, domestic industries'],
+  ['B029RC1Q027SBEA', '기업 경상이전 (순)', 3, 'Business current transfer payments (net)'],
+  ['PROPINC', '자영업자 소득', 3, "Proprietors' income with inventory valuation and capital consumption adjustments"],
+  ['RENTIN', '개인 임대소득', 3, 'Rental income of persons with capital consumption adjustment'],
+  ['A445RC1Q027SBEA', '국내 기업이익', 3, 'Corporate profits with inventory valuation and capital consumption adjustments, domestic industries'],
+  ['A054RC1Q027SBEA', '법인세', 4, 'Taxes on corporate income'],
+  ['W273RC1Q027SBEA', '세후 이익', 4, 'Profits after tax with inventory valuation and capital consumption adjustments'],
+  ['A449RC1Q027SBEA', '순배당', 5, 'Net dividends'],
+  ['W274RC1Q027SBEA', '사내유보 이익', 5, 'Undistributed corporate profits with inventory valuation and capital consumption adjustments'],
+  ['A108RC1Q027SBEA', '정부기업 경상잉여', 2, 'Current surplus of government enterprises'],
+  ['COFC', '고정자본소모', 1, 'Consumption of fixed capital'],
+  ['A024RC1Q027SBEA', '민간', 2, 'Private'],
+  ['A264RC1Q027SBEA', '정부', 2, 'Government'],
+  ['A030RC1Q027SBEA', '통계적 불일치', 1, 'Statistical discrepancy'],
+].map(([t, name, level, en], i) => [i + 1, t, 'gdi_quarterly', name, level, en]);
 const FRED_TABLE = (eid) => `https://fred.stlouisfed.org/release/tables?rid=53&eid=${eid}`;
 
 // ===== 사이드바 묶음 · 페이지 · 차트 정의 =====
@@ -337,62 +379,11 @@ const PAGES = {
   growth: {
     group: 'us',
     title: '성장',
-    desc: '주요국: 인포맥스 분기 데이터 기준 실질 GDP 성장률(전년동기비, %). GDP: BEA 국민계정 발표표(FRED release 53) — fred 리포 NIPA 항목 DB를 바로 읽어요.',
-    subtabs: [['main', '주요국'], ['us-gdp', 'GDP']],
+    desc: '인포맥스 분기 데이터 기준 실질 GDP 성장률(전년동기비, %).',
     defaultPeriod: 's2020',
-    // nipa: 발표표 블록 (rows = [줄, 티커, DB, 항목명, 단계, 영문]). 열은 기간 안의 분기, 최신이 오른쪽
-    // src: FRED 원표 링크, modes: 기준 버튼(YoY/QoQ/원래 값) 표시
-    nipa: [
-      { sub: 'us-gdp', id: 'nipa-112', title: '실질 GDP 성장률 기여도', unit: '%p', digits: 2, rows: NIPA_152, src: FRED_TABLE(13562),
-        note: '전기 대비 연율(%). 1줄은 실질 GDP 성장률, 나머지는 성장률에 대한 기여도(%p)라 하위 항목을 더하면 위 항목이 돼요.' },
-      { sub: 'us-gdp', id: 'nipa-111', title: '실질 GDP 변동률', unit: '%', digits: 1, rows: NIPA_151, src: FRED_TABLE(13498),
-        note: '전기 대비 연율(%). 1줄이 헤드라인 성장률이에요. 재고 변동·순수출은 수준이 음수가 될 수 있어 BEA가 변동률을 내지 않아 비워 둬요. ▸ 줄을 누르면 세부 항목이 펼쳐져요.' },
-      { sub: 'us-gdp', id: 'nipa-115', title: '명목 GDP', unit: '십억 달러', digits: 1, rows: NIPA_155, src: FRED_TABLE(14897), modes: true,
-        note: '계절조정 연율. 원래 값 기준 소비 + 투자 + 순수출 + 정부 = GDP, 순수출 = 수출 − 수입. 재고 변동·순수출은 음수가 될 수 있어 증가율은 비워 둬요.' },
-    ],
     charts: [
-      { sub: 'us-gdp', id: 'chart-gdp-contrib', title: '실질 GDP 성장률 기여도 추이', src: FRED_TABLE(12914), table: 'gdp_quarterly', unit: '%', digits: 2, bar: true, stack: true, wide: true, defs: [
-        { color: '--slot-1', label: '개인소비', exact: 'DPCERY2Q224SBEA', table: 'pio_quarterly' },
-        { color: '--slot-2', label: '민간투자', exact: 'A006RY2Q224SBEA', table: 'dca_quarterly' },
-        { color: '--slot-3', label: '순수출', exact: 'A019RY2Q224SBEA', table: 'exp_quarterly' },
-        { color: '--slot-4', label: '정부', exact: 'A822RY2Q224SBEA', table: 'gov_quarterly' },
-        { color: '--base-rate', label: '실질 GDP 성장률', exact: 'A191RL1Q225SBEA', line: true },
-      ], note: '막대 = 항목별 기여도(%p), 선 = 실질 GDP 성장률(전기 대비 연율, %)' },
-      // 항목별 기여도 추이 (2열): 상위 항목 = 검정 선, 하위 항목 = 색 선, 더 깊은 하위는 회색 점선(범례 클릭으로 표시)
-      { sub: 'us-gdp', id: 'chart-gdp-pce', heading: '항목별 기여도 추이', title: '개인소비지출', src: FRED_TABLE(12914), table: 'pio_quarterly', unit: '%p', digits: 2, defs: [
-        { color: '--base-rate', label: '개인소비지출', exact: 'DPCERY2Q224SBEA' },
-        { color: '--slot-1', label: '상품', exact: 'DGDSRY2Q224SBEA' },
-        { color: '--slot-2', label: '서비스', exact: 'DSERRY2Q224SBEA' },
-        { other: true, hidden: true, dash: 'dashed', label: '내구재', exact: 'DDURRY2Q224SBEA' },
-        { other: true, hidden: true, dash: 'dotted', label: '비내구재', exact: 'DNDGRY2Q224SBEA' },
-      ], note: '실질 GDP 성장률에 대한 기여도(%p, 전기 대비 연율)' },
-      { sub: 'us-gdp', id: 'chart-gdp-inv', title: '민간총투자', src: FRED_TABLE(12914), table: 'dca_quarterly', unit: '%p', digits: 2, defs: [
-        { color: '--base-rate', label: '민간총투자', exact: 'A006RY2Q224SBEA' },
-        { color: '--slot-1', label: '비주거', exact: 'A008RY2Q224SBEA' },
-        { color: '--slot-2', label: '주거', exact: 'A011RY2Q224SBEA' },
-        { color: '--slot-3', label: '재고 변동', exact: 'A014RY2Q224SBEA' },
-        { other: true, hidden: true, dash: 'dashed', label: '구조물', exact: 'A009RY2Q224SBEA' },
-        { other: true, hidden: true, dash: 'dotted', label: '장비', exact: 'Y033RY2Q224SBEA', table: 'gdp_quarterly' },
-        { other: true, hidden: true, dash: [8, 3, 2, 3], label: '지식재산', exact: 'Y001RY2Q224SBEA', table: 'gdp_quarterly' },
-      ], note: '고정투자 = 비주거 + 주거. 구조물·장비·지식재산(비주거 하위)은 범례 클릭으로 표시' },
-      { sub: 'us-gdp', id: 'chart-gdp-nx', title: '순수출', src: FRED_TABLE(12914), table: 'exp_quarterly', unit: '%p', digits: 2, defs: [
-        { color: '--base-rate', label: '순수출', exact: 'A019RY2Q224SBEA' },
-        { color: '--slot-1', label: '수출', exact: 'A020RY2Q224SBEA' },
-        { color: '--slot-2', label: '수입', exact: 'A021RY2Q224SBEA', table: 'imp_quarterly' },
-        { other: true, hidden: true, dash: 'dashed', label: '수출 상품', exact: 'A253RY2Q224SBEA' },
-        { other: true, hidden: true, dash: 'dotted', label: '수출 서비스', exact: 'A646RY2Q224SBEA' },
-        { other: true, hidden: true, dash: [8, 3, 2, 3], label: '수입 상품', exact: 'A255RY2Q224SBEA', table: 'imp_quarterly' },
-        { other: true, hidden: true, dash: [2, 6], label: '수입 서비스', exact: 'A656RY2Q224SBEA', table: 'imp_quarterly' },
-      ], note: '수입이 늘면 기여도는 음수. 상품·서비스 세부는 범례 클릭으로 표시' },
-      { sub: 'us-gdp', id: 'chart-gdp-gov', title: '정부 소비·투자', src: FRED_TABLE(12914), table: 'gov_quarterly', unit: '%p', digits: 2, defs: [
-        { color: '--base-rate', label: '정부 소비·투자', exact: 'A822RY2Q224SBEA' },
-        { color: '--slot-1', label: '연방', exact: 'A823RY2Q224SBEA' },
-        { color: '--slot-2', label: '주·지방', exact: 'A829RY2Q224SBEA' },
-        { other: true, hidden: true, dash: 'dashed', label: '국방', exact: 'A824RY2Q224SBEA' },
-        { other: true, hidden: true, dash: 'dotted', label: '비국방', exact: 'A825RY2Q224SBEA' },
-      ], note: '연방 = 국방 + 비국방. 세부는 범례 클릭으로 표시' },
       // Main(분기) 'GDP 성장률' 차트와 같은 국가 구성
-      { sub: 'main', id: 'chart-gdp', title: '주요국 GDP 성장률 추이', table: INFO_Q, unit: '%', defs: [
+      { id: 'chart-gdp', title: '주요국 GDP 성장률 추이', table: INFO_Q, unit: '%', defs: [
         { key: 'kr', label: '한국', prefix: '한국:' },
         { key: 'us', label: '미국', prefix: '미국:' },
         { key: 'eu', label: 'EU', prefix: 'EU:' },
@@ -403,6 +394,72 @@ const PAGES = {
         { other: true, dash: 'solid', label: '독일', prefix: '독일:' },
         { other: true, dash: 'dashed', label: '프랑스', prefix: '프랑스:' },
       ] },
+    ],
+  },
+  // parent: 사이드바에서 이 페이지 아래에 들여써서 보여줌
+  gdp: {
+    group: 'us',
+    parent: 'growth',
+    title: 'GDP',
+    desc: 'BEA 국민계정 발표표(FRED release 53) 기준 — fred 리포 NIPA 항목 DB를 바로 읽어요. 표는 최신 분기가 오른쪽이에요.',
+    subtabs: [['chg', '변동'], ['contrib', '기여도'], ['core', 'Core GDP'], ['gdi', 'GDI'], ['nominal', '명목 GDP']],
+    defaultPeriod: 's2020',
+    // nipa: 발표표 블록 (rows = [줄, 티커, DB, 항목명, 단계, 영문, 새 줄]). 열은 기간 안의 분기, 최신이 오른쪽
+    // src: FRED 원표 링크, modes: 기준 버튼(YoY/QoQ/원래 값) 표시, noPct: 음수가 될 수 있어 증가율을 비우는 줄
+    // highlight: 강조할 줄, sep: 위에 구분선을 넣을 줄 (위계와 무관)
+    nipa: [
+      { sub: 'chg', id: 'nipa-111', title: '실질 GDP 변동률', unit: '%', digits: 1, rows: NIPA_151, src: FRED_TABLE(13498),
+        note: '전기 대비 연율(%). 1줄이 헤드라인 성장률이에요. 재고 변동·순수출은 수준이 음수가 될 수 있어 BEA가 변동률을 내지 않아 비워 둬요. ▸ 줄을 누르면 세부 항목이 펼쳐져요.' },
+      { sub: 'contrib', id: 'nipa-112', title: '실질 GDP 성장률 기여도', unit: '%p', digits: 2, rows: NIPA_152, src: FRED_TABLE(13562),
+        note: '전기 대비 연율(%). 1줄은 실질 GDP 성장률, 나머지는 성장률에 대한 기여도(%p)라 하위 항목을 더하면 위 항목이 돼요.' },
+      { sub: 'core', id: 'nipa-141', title: 'Core GDP (민간 국내구매자 최종판매)', unit: '%', digits: 1, rows: NIPA_141, src: FRED_TABLE(13445), highlight: [1, 8], sep: [7],
+        note: '전기 대비 연율(%). Core GDP(8줄) = 개인소비 + 민간 고정투자. 변동이 큰 순수출·재고·정부를 빼서 민간 수요의 기조를 봐요. 재고 변동은 BEA가 변동률을 내지 않아 비워 둬요. 7줄부터는 참고 항목이에요.' },
+      { sub: 'gdi', id: 'nipa-110', title: '국내총소득 (GDI)', unit: '십억 달러', digits: 1, rows: NIPA_110, src: FRED_TABLE(17636), modes: true, noPct: new Set([19, 20, 24]),
+        note: '계절조정 연율. 소득 쪽에서 잰 GDP로, GDP − GDI = 통계적 불일치(24줄). 기업이익은 한 달 늦게 나와 속보치 분기엔 GDI·순영업잉여·기업이익이 비어 있어요. 음수가 될 수 있는 줄은 증가율을 비워 둬요.' },
+      { sub: 'nominal', id: 'nipa-115', title: '명목 GDP', unit: '십억 달러', digits: 1, rows: NIPA_155, src: FRED_TABLE(14897), modes: true, noPct: NIPA_NO_PCT,
+        note: '계절조정 연율. 원래 값 기준 소비 + 투자 + 순수출 + 정부 = GDP, 순수출 = 수출 − 수입. 재고 변동·순수출은 음수가 될 수 있어 증가율은 비워 둬요.' },
+    ],
+    charts: [
+      { sub: 'contrib', id: 'chart-gdp-contrib', title: '실질 GDP 성장률 기여도 추이', src: FRED_TABLE(12914), table: 'gdp_quarterly', unit: '%', digits: 2, bar: true, stack: true, wide: true, defs: [
+        { color: '--slot-1', label: '개인소비', exact: 'DPCERY2Q224SBEA', table: 'pio_quarterly' },
+        { color: '--slot-2', label: '민간투자', exact: 'A006RY2Q224SBEA', table: 'dca_quarterly' },
+        { color: '--slot-3', label: '순수출', exact: 'A019RY2Q224SBEA', table: 'exp_quarterly' },
+        { color: '--slot-4', label: '정부', exact: 'A822RY2Q224SBEA', table: 'gov_quarterly' },
+        { color: '--base-rate', label: '실질 GDP 성장률', exact: 'A191RL1Q225SBEA', line: true },
+      ], note: '막대 = 항목별 기여도(%p), 선 = 실질 GDP 성장률(전기 대비 연율, %)' },
+      // 항목별 기여도 추이 (2열): 상위 항목 = 검정 선, 하위 항목 = 색 선, 더 깊은 하위는 회색 점선(범례 클릭으로 표시)
+      { sub: 'contrib', id: 'chart-gdp-pce', heading: '항목별 기여도 추이', title: '개인소비지출', src: FRED_TABLE(12914), table: 'pio_quarterly', unit: '%p', digits: 2, defs: [
+        { color: '--base-rate', label: '개인소비지출', exact: 'DPCERY2Q224SBEA' },
+        { color: '--slot-1', label: '상품', exact: 'DGDSRY2Q224SBEA' },
+        { color: '--slot-2', label: '서비스', exact: 'DSERRY2Q224SBEA' },
+        { other: true, hidden: true, dash: 'dashed', label: '내구재', exact: 'DDURRY2Q224SBEA' },
+        { other: true, hidden: true, dash: 'dotted', label: '비내구재', exact: 'DNDGRY2Q224SBEA' },
+      ], note: '실질 GDP 성장률에 대한 기여도(%p, 전기 대비 연율)' },
+      { sub: 'contrib', id: 'chart-gdp-inv', title: '민간총투자', src: FRED_TABLE(12914), table: 'dca_quarterly', unit: '%p', digits: 2, defs: [
+        { color: '--base-rate', label: '민간총투자', exact: 'A006RY2Q224SBEA' },
+        { color: '--slot-1', label: '비주거', exact: 'A008RY2Q224SBEA' },
+        { color: '--slot-2', label: '주거', exact: 'A011RY2Q224SBEA' },
+        { color: '--slot-3', label: '재고 변동', exact: 'A014RY2Q224SBEA' },
+        { other: true, hidden: true, dash: 'dashed', label: '구조물', exact: 'A009RY2Q224SBEA' },
+        { other: true, hidden: true, dash: 'dotted', label: '장비', exact: 'Y033RY2Q224SBEA', table: 'gdp_quarterly' },
+        { other: true, hidden: true, dash: [8, 3, 2, 3], label: '지식재산', exact: 'Y001RY2Q224SBEA', table: 'gdp_quarterly' },
+      ], note: '고정투자 = 비주거 + 주거. 구조물·장비·지식재산(비주거 하위)은 범례 클릭으로 표시' },
+      { sub: 'contrib', id: 'chart-gdp-nx', title: '순수출', src: FRED_TABLE(12914), table: 'exp_quarterly', unit: '%p', digits: 2, defs: [
+        { color: '--base-rate', label: '순수출', exact: 'A019RY2Q224SBEA' },
+        { color: '--slot-1', label: '수출', exact: 'A020RY2Q224SBEA' },
+        { color: '--slot-2', label: '수입', exact: 'A021RY2Q224SBEA', table: 'imp_quarterly' },
+        { other: true, hidden: true, dash: 'dashed', label: '수출 상품', exact: 'A253RY2Q224SBEA' },
+        { other: true, hidden: true, dash: 'dotted', label: '수출 서비스', exact: 'A646RY2Q224SBEA' },
+        { other: true, hidden: true, dash: [8, 3, 2, 3], label: '수입 상품', exact: 'A255RY2Q224SBEA', table: 'imp_quarterly' },
+        { other: true, hidden: true, dash: [2, 6], label: '수입 서비스', exact: 'A656RY2Q224SBEA', table: 'imp_quarterly' },
+      ], note: '수입이 늘면 기여도는 음수. 상품·서비스 세부는 범례 클릭으로 표시' },
+      { sub: 'contrib', id: 'chart-gdp-gov', title: '정부 소비·투자', src: FRED_TABLE(12914), table: 'gov_quarterly', unit: '%p', digits: 2, defs: [
+        { color: '--base-rate', label: '정부 소비·투자', exact: 'A822RY2Q224SBEA' },
+        { color: '--slot-1', label: '연방', exact: 'A823RY2Q224SBEA' },
+        { color: '--slot-2', label: '주·지방', exact: 'A829RY2Q224SBEA' },
+        { other: true, hidden: true, dash: 'dashed', label: '국방', exact: 'A824RY2Q224SBEA' },
+        { other: true, hidden: true, dash: 'dotted', label: '비국방', exact: 'A825RY2Q224SBEA' },
+      ], note: '연방 = 국방 + 비국방. 세부는 범례 클릭으로 표시' },
     ],
   },
   // 01. US 매크로 엑셀 Main(분기)의 신용 관련 차트. 모두 FRED 분기 데이터, 기준금리는 오른쪽 축.
@@ -752,7 +809,7 @@ const PAGES = {
 // ===== 상태 =====
 // panel: 패널 id → { mode: 'mom'|'yoy', slots: Map(티커 → 색 번호) }
 // nipa: 발표표 id → { mode: 'yoy'|'qoqa'|'raw', collapsed: Set(접은 줄 번호) }
-const state = { data: {}, page: 'rates', sub: { rates: 'main', growth: 'main', business: 'manufacturing', credit: 'leverage' }, period: {}, tenor: 10, legend: {}, ready: {}, panel: {}, nipa: {} };
+const state = { data: {}, page: 'rates', sub: { rates: 'main', gdp: 'chg', business: 'manufacturing', credit: 'leverage' }, period: {}, tenor: 10, legend: {}, ready: {}, panel: {}, nipa: {} };
 const charts = {};
 
 // ===== 유틸 =====
@@ -1150,8 +1207,9 @@ function drawNipa(spec, page) {
   const period = state.period[page];
   const { mode, collapsed } = nipaState(spec);
   const pct = mode !== 'raw';
+  const noPct = spec.noPct || new Set();
   const rows = spec.rows.map((row) => {
-    const v = !row[1] || (pct && NIPA_NO_PCT.has(row[0])) ? null : valuesOf(state.data[row[2]], { exact: row[1], transform: pct ? mode : undefined });
+    const v = !row[1] || (pct && noPct.has(row[0])) ? null : valuesOf(state.data[row[2]], { exact: row[1], transform: pct ? mode : undefined });
     return { row, at: new Map(v ? pointsInPeriod(v, period) : []) };
   });
   // 위계: 각 줄의 상위 줄 목록, 하위 항목 유무
@@ -1174,7 +1232,8 @@ function drawNipa(spec, page) {
     <tbody>${rows.map(({ row: [line, t, , name, level, en], at }, i) => {
       const hidden = parents[i].some((l) => collapsed.has(l));
       const toggle = hasKids(i) ? `<span class="fold">${collapsed.has(line) ? '▸' : '▾'}</span>` : '<span class="fold"></span>';
-      return `<tr class="lv${level}${hasKids(i) ? ' parent' : ''}" data-line="${line}"${hidden ? ' hidden' : ''}><td class="line">${line}</td><th class="name" title="${en}${t ? ` (${t})` : ''}">${toggle}${name}</th>${quarters.map((q) => cell(at.get(q))).join('')}</tr>`;
+      const cls = [spec.highlight?.includes(line) ? 'lv0' : `lv${level}`, hasKids(i) && 'parent', spec.sep?.includes(line) && 'sep'].filter(Boolean).join(' ');
+      return `<tr class="${cls}" data-line="${line}"${hidden ? ' hidden' : ''}><td class="line">${line}</td><th class="name" title="${en}${t ? ` (${t})` : ''}">${toggle}${name}</th>${quarters.map((q) => cell(at.get(q))).join('')}</tr>`;
     }).join('')}</tbody>`;
   el.querySelectorAll('tbody tr.parent').forEach((tr) => {
     tr.onclick = () => {
@@ -1188,7 +1247,7 @@ function drawNipa(spec, page) {
     wrap.scrollLeft = wrap.scrollWidth;
     wrap.dataset.view = `${period.key}/${mode}`;
   }
-  const missing = rows.filter((r) => r.row[1] && !r.at.size && !(pct && NIPA_NO_PCT.has(r.row[0]))).map((r) => r.row[1]);
+  const missing = rows.filter((r) => r.row[1] && !r.at.size && !(pct && noPct.has(r.row[0]))).map((r) => r.row[1]);
   document.getElementById(`note-${spec.id}`).textContent = [spec.note, missing.length ? `${periodName(period)} 값 없음: ${missing.join(', ')}` : ''].filter(Boolean).join(' · ');
 }
 
@@ -1209,7 +1268,7 @@ function buildPages() {
     nav.insertAdjacentHTML('beforeend', `
       <div class="nav-group">
         <div class="nav-group-title"><span class="code">${group.toUpperCase()}</span>${label}</div>
-        ${pages.length ? pages.map(([id, cfg]) => `<a href="#${id}" data-page="${id}">${cfg.title}</a>`).join('') : '<p class="nav-empty">준비 중</p>'}
+        ${pages.length ? pages.map(([id, cfg]) => `<a href="#${id}" data-page="${id}"${cfg.parent ? ' class="nav-sub"' : ''}>${cfg.title}</a>`).join('') : '<p class="nav-empty">준비 중</p>'}
       </div>`);
   }
 
@@ -1248,7 +1307,7 @@ function buildPages() {
     const body = cfg.subtabs
       ? cfg.subtabs.map(([s]) => `<div class="subpage" data-subpage="${id}/${s}">${grid(cfg.charts.filter((c) => c.sub === s))}${panels(s)}${nipa(s)}</div>`).join('')
       : grid(cfg.charts) + panels() + nipa();
-    const groupLabel = GROUPS.find(([g]) => g === cfg.group)[1];
+    const groupLabel = GROUPS.find(([g]) => g === cfg.group)[1] + (cfg.parent ? ` · ${PAGES[cfg.parent].title}` : '');
 
     main.insertAdjacentHTML('beforeend', `
       <section class="page" id="page-${id}">
@@ -1265,6 +1324,7 @@ function buildPages() {
 // 주소 형식: #페이지 또는 #페이지/하위탭 (예: #rates/global)
 function showPage(hash) {
   let [page, sub] = hash.split('/');
+  if (page === 'growth' && sub === 'us-gdp') [page, sub] = ['gdp', 'chg'];
   if (!PAGES[page]) page = 'rates';
   state.page = page;
   if (PAGES[page].subtabs) {
