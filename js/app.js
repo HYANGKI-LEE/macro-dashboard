@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261030a';
+const VERSION = '20261030b';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -244,8 +244,8 @@ const PAGES = {
   growth: {
     group: 'us',
     title: '성장',
-    desc: '주요국: 인포맥스 분기 데이터 기준 실질 GDP 성장률(전년동기비, %). 미국 GDP: BEA 국민계정 발표표(FRED release 53) — fred 리포 NIPA 항목 DB를 바로 읽어요.',
-    subtabs: [['main', '주요국'], ['us-gdp', '미국 GDP']],
+    desc: '주요국: 인포맥스 분기 데이터 기준 실질 GDP 성장률(전년동기비, %). GDP: BEA 국민계정 발표표(FRED release 53) — fred 리포 NIPA 항목 DB를 바로 읽어요.',
+    subtabs: [['main', '주요국'], ['us-gdp', 'GDP']],
     defaultPeriod: 's2020',
     // nipa: 발표표 블록 (rows = [줄, 티커, DB, 항목명, 단계]). 열은 기간 안의 분기, 최신이 왼쪽
     nipa: [
@@ -255,7 +255,7 @@ const PAGES = {
         note: '계절조정 연율, 십억 달러. 소비 + 투자 + 순수출 + 정부 = GDP. 순수출 = 수출 − 수입.' },
     ],
     charts: [
-      { sub: 'us-gdp', id: 'chart-gdp-contrib', title: '미국 실질 GDP 성장률 기여도 (Table 1.1.2)', table: 'gdp_quarterly', unit: '%', digits: 2, bar: true, stack: true, wide: true, defs: [
+      { sub: 'us-gdp', id: 'chart-gdp-contrib', title: '실질 GDP 성장률 기여도 (Table 1.1.2)', table: 'gdp_quarterly', unit: '%', digits: 2, bar: true, stack: true, wide: true, defs: [
         { color: '--slot-1', label: '개인소비', exact: 'DPCERY2Q224SBEA', table: 'pio_quarterly' },
         { color: '--slot-2', label: '민간투자', exact: 'A006RY2Q224SBEA', table: 'dca_quarterly' },
         { color: '--slot-3', label: '순수출', exact: 'A019RY2Q224SBEA', table: 'exp_quarterly' },
@@ -1004,12 +1004,15 @@ function drawNipa(spec, page) {
     const v = valuesOf(state.data[row[2]], { exact: row[1] });
     return { row, at: new Map(v ? pointsInPeriod(v, period) : []) };
   });
-  const quarters = [...new Set(rows.flatMap((r) => [...r.at.keys()]))].sort((a, b) => b - a);
+  const quarters = [...new Set(rows.flatMap((r) => [...r.at.keys()]))].sort((a, b) => a - b);
   const fmt = (v) => v.toLocaleString('ko-KR', { minimumFractionDigits: spec.digits, maximumFractionDigits: spec.digits });
   const cell = (v) => (v === undefined ? '<td></td>' : `<td class="${v < 0 ? 'down' : ''}">${fmt(v)}</td>`);
   document.getElementById(`table-${spec.id}`).innerHTML = `
     <thead><tr><th class="line">줄</th><th class="name">항목 (${spec.unit})</th>${quarters.map((t) => `<th>${quarterLabel(t)}</th>`).join('')}</tr></thead>
     <tbody>${rows.map(({ row: [line, t, , name, level], at }) => `<tr class="lv${level}"><td class="line">${line}</td><th class="name" title="${t}">${name}</th>${quarters.map((q) => cell(at.get(q))).join('')}</tr>`).join('')}</tbody>`;
+  // 최신 분기가 오른쪽: 처음엔 맨 오른쪽(최신)이 보이게 스크롤
+  const wrap = document.getElementById(`table-${spec.id}`).parentElement;
+  wrap.scrollLeft = wrap.scrollWidth;
   const missing = rows.filter((r) => !r.at.size).map((r) => r.row[1]);
   document.getElementById(`note-${spec.id}`).textContent = [spec.note, missing.length ? `${periodName(period)} 값 없음: ${missing.join(', ')}` : ''].filter(Boolean).join(' · ');
 }
