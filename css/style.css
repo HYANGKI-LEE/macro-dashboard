@@ -153,6 +153,8 @@ p.note { margin: 0 0 4px; min-height: 1em; color: var(--text-muted); font-size: 
 .nipa-table tr.lv2 .name { padding-left: 36px; color: var(--text-primary); }
 .nipa-table tr.lv3 .name { padding-left: 52px; color: var(--text-secondary); }
 .nipa-table tr.lv4 .name { padding-left: 68px; color: var(--text-secondary); }
+.nipa-table tr.lv5 .name { padding-left: 84px; color: var(--text-secondary); }
+.nipa-table tr.lv6 .name { padding-left: 100px; color: var(--text-muted); }
 
 .loading {
   position: absolute; inset: 0;

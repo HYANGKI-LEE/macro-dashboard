@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261030f';
+const VERSION = '20261030g';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -132,47 +132,124 @@ const TABLE2 = [
 ];
 const SLOTS = 7; // css --slot-1 ~ --slot-7
 
-// BEA 국민계정(NIPA) 발표표. FRED release 53(GDP) 표 구조 그대로: [줄 번호, FRED 티커, DB, 항목명, 단계(0~4), 영문 이름]
-// 같은 26줄 구조라 항목명·단계·영문 이름은 공유하고 티커만 표마다 다르다.
+// BEA 국민계정(NIPA) 발표표, 확장판(Table 1.5.x) 62줄. FRED release 53 표 구조 그대로.
+// NIPA_LINES: [항목명, 단계(0~6), 영문 이름, 새 줄(1.1.x 기본표에 없는 세부 → 처음엔 접힘)]
+// 세 표가 같은 62줄 구조라 항목명·단계·영문 이름은 공유하고, 표마다 'DB 약어:티커' 만 다르다 (null = BEA가 값을 내지 않는 줄).
 const NIPA_LINES = [
-  ['국내총생산 (GDP)', 0, 'gdp', 'Gross domestic product'],
-  ['개인소비지출', 1, 'pio', 'Personal consumption expenditures'],
-  ['상품', 2, 'pio', 'Goods'], ['내구재', 3, 'pio', 'Durable goods'], ['비내구재', 3, 'pio', 'Nondurable goods'], ['서비스', 2, 'pio', 'Services'],
-  ['민간총투자', 1, 'dca', 'Gross private domestic investment'], ['고정투자', 2, 'dca', 'Fixed investment'], ['비주거', 3, 'dca', 'Nonresidential'],
-  ['구조물', 4, 'dca', 'Structures'], ['장비', 4, 'dca', 'Equipment'], ['지식재산', 4, 'dca', 'Intellectual property products'], ['주거', 3, 'dca', 'Residential'],
-  ['재고 변동', 2, 'dca', 'Change in private inventories'],
-  ['순수출', 1, 'exp', 'Net exports of goods and services'],
-  ['수출', 2, 'exp', 'Exports'], ['상품', 3, 'exp', 'Goods'], ['서비스', 3, 'exp', 'Services'],
-  ['수입', 2, 'imp', 'Imports'], ['상품', 3, 'imp', 'Goods'], ['서비스', 3, 'imp', 'Services'],
-  ['정부 소비·투자', 1, 'gov', 'Government consumption expenditures and gross investment'],
-  ['연방', 2, 'gov', 'Federal'], ['국방', 3, 'gov', 'National defense'], ['비국방', 3, 'gov', 'Nondefense'], ['주·지방', 2, 'gov', 'State and local'],
+  ['국내총생산 (GDP)', 0, 'Gross domestic product'],
+  ['개인소비지출', 1, 'Personal consumption expenditures'],
+  ['상품', 2, 'Goods'],
+  ['내구재', 3, 'Durable goods'],
+  ['자동차·부품', 4, 'Motor vehicles and parts', 1],
+  ['가구·가전', 4, 'Furnishings and durable household equipment', 1],
+  ['레저용품·차량', 4, 'Recreational goods and vehicles', 1],
+  ['기타 내구재', 4, 'Other durable goods', 1],
+  ['비내구재', 3, 'Nondurable goods'],
+  ['식료품 (가정용)', 4, 'Food and beverages purchased for off-premises consumption', 1],
+  ['의류·신발', 4, 'Clothing and footwear', 1],
+  ['휘발유·에너지', 4, 'Gasoline and other energy goods', 1],
+  ['기타 비내구재', 4, 'Other nondurable goods', 1],
+  ['서비스', 2, 'Services'],
+  ['가계 서비스 지출', 3, 'Household consumption expenditures (for services)', 1],
+  ['주거·공공요금', 4, 'Housing and utilities', 1],
+  ['의료', 4, 'Health care', 1],
+  ['운송 서비스', 4, 'Transportation services', 1],
+  ['여가 서비스', 4, 'Recreation services', 1],
+  ['외식·숙박', 4, 'Food services and accommodations', 1],
+  ['금융·보험', 4, 'Financial services and insurance', 1],
+  ['기타 서비스', 4, 'Other services', 1],
+  ['비영리단체 최종소비', 3, 'Final consumption expenditures of nonprofit institutions serving households (NPISHs)', 1],
+  ['비영리단체 총산출', 4, 'Gross output of nonprofit institutions', 1],
+  ['(차감) 비영리단체 판매수입', 4, 'Less: Receipts from sales of goods and services by nonprofit institutions', 1],
+  ['민간총투자', 1, 'Gross private domestic investment'],
+  ['고정투자', 2, 'Fixed investment'],
+  ['비주거', 3, 'Nonresidential'],
+  ['구조물', 4, 'Structures'],
+  ['장비', 4, 'Equipment'],
+  ['정보처리장비', 5, 'Information processing equipment', 1],
+  ['컴퓨터·주변기기', 6, 'Computers and peripheral equipment', 1],
+  ['기타', 6, 'Other', 1],
+  ['산업장비', 5, 'Industrial equipment', 1],
+  ['운송장비', 5, 'Transportation equipment', 1],
+  ['기타 장비', 5, 'Other equipment', 1],
+  ['지식재산', 4, 'Intellectual property products'],
+  ['소프트웨어', 5, 'Software', 1],
+  ['연구개발 (R&D)', 5, 'Research and development', 1],
+  ['엔터테인먼트·예술 원본', 5, 'Entertainment, literary, and artistic originals', 1],
+  ['주거', 3, 'Residential'],
+  ['재고 변동', 2, 'Change in private inventories'],
+  ['농업', 3, 'Farm', 1],
+  ['비농업', 3, 'Nonfarm', 1],
+  ['순수출', 1, 'Net exports of goods and services'],
+  ['수출', 2, 'Exports'],
+  ['상품', 3, 'Goods'],
+  ['서비스', 3, 'Services'],
+  ['수입', 2, 'Imports'],
+  ['상품', 3, 'Goods'],
+  ['서비스', 3, 'Services'],
+  ['정부 소비·투자', 1, 'Government consumption expenditures and gross investment'],
+  ['연방', 2, 'Federal'],
+  ['국방', 3, 'National defense'],
+  ['소비지출', 4, 'Consumption expenditures', 1],
+  ['투자', 4, 'Gross investment', 1],
+  ['비국방', 3, 'Nondefense'],
+  ['소비지출', 4, 'Consumption expenditures', 1],
+  ['투자', 4, 'Gross investment', 1],
+  ['주·지방', 2, 'State and local'],
+  ['소비지출', 3, 'Consumption expenditures', 1],
+  ['투자', 3, 'Gross investment', 1],
 ];
-// 표마다 DB가 다른 줄: { 줄 번호: DB 약어 }
-const nipaRows = (tickers, dbOverride = {}) => tickers.map((t, i) => {
-  const [name, level, db, en] = NIPA_LINES[i];
-  return [i + 1, t, `${dbOverride[i + 1] || db}_quarterly`, name, level, en];
+// 행: [줄 번호, 티커, DB, 항목명, 단계, 영문 이름, 새 줄]
+const nipaRows = (cells) => cells.map((c, i) => {
+  const [name, level, en, isNew] = NIPA_LINES[i];
+  const [db, t] = c ? c.split(':') : [null, null];
+  return [i + 1, t, db && `${db}_quarterly`, name, level, en, !!isNew];
 });
-// 수준이 음수가 될 수 있어 증가율(%)이 의미 없는 줄 (재고 변동, 순수출)
-const NIPA_NO_PCT = new Set([14, 15]);
+// 1.5.1 실질 변동률 (재고 변동·순수출은 BEA가 변동률을 내지 않음)
+const NIPA_151 = nipaRows([
+  'gdp:A191RL1Q225SBEA', 'pio:DPCERL1Q225SBEA', 'pio:DGDSRL1Q225SBEA', 'pio:DDURRL1Q225SBEA', 'pio:DMOTRL1Q225SBEA', 'pio:DFDHRL1Q225SBEA',
+  'pio:DREQRL1Q225SBEA', 'pio:DODGRL1Q225SBEA', 'pio:DNDGRL1Q225SBEA', 'pio:DFXARL1Q225SBEA', 'pio:DCLORL1Q225SBEA', 'pio:DGOERL1Q225SBEA',
+  'pio:DONGRL1Q225SBEA', 'pio:DSERRL1Q225SBEA', 'pio:DHCERL1Q225SBEA', 'pio:DHUTRL1Q225SBEA', 'pio:DHLCRL1Q225SBEA', 'pio:DTRSRL1Q225SBEA',
+  'pio:DRCARL1Q225SBEA', 'pio:DFSARL1Q225SBEA', 'pio:DIFSRL1Q225SBEA', 'pio:DOTSRL1Q225SBEA', 'pio:DNPIRL1Q225SBEA', 'pio:DNPERL1Q225SBEA',
+  'pio:DNPSRL1Q225SBEA', 'dca:A006RL1Q225SBEA', 'dca:A007RL1Q225SBEA', 'dca:A008RL1Q225SBEA', 'dca:A009RL1Q225SBEA', 'dca:Y033RL1Q225SBEA',
+  'dca:Y034RL1Q225SBEA', 'dca:B935RL1Q225SBEA', 'dca:A937RL1Q225SBEA', 'dca:A680RL1Q225SBEA', 'dca:A681RL1Q225SBEA', 'dca:A862RL1Q225SBEA',
+  'dca:Y001RL1Q225SBEA', 'dca:B985RL1Q225SBEA', 'dca:Y006RL1Q225SBEA', 'dca:Y020RL1Q225SBEA', 'dca:A011RL1Q225SBEA', null,
+  null, null, null, 'exp:A020RL1Q158SBEA', 'exp:A253RL1Q225SBEA', 'exp:A646RL1Q225SBEA',
+  'imp:A021RL1Q158SBEA', 'imp:A255RL1Q225SBEA', 'imp:A656RL1Q225SBEA', 'gov:A822RL1Q225SBEA', 'gov:A823RL1Q225SBEA', 'gov:A824RL1Q225SBEA',
+  'gov:A997RL1Q225SBEA', 'gov:A788RL1Q225SBEA', 'gov:A825RL1Q225SBEA', 'gov:A542RL1Q225SBEA', 'gov:A798RL1Q225SBEA', 'gov:A829RL1Q225SBEA',
+  'gov:A991RL1Q225SBEA', 'gov:A799RL1Q225SBEA',
+]);
+// 1.5.2 실질 성장률 기여도
+const NIPA_152 = nipaRows([
+  'gdp:A191RL1Q225SBEA', 'pio:DPCERY2Q224SBEA', 'pio:DGDSRY2Q224SBEA', 'pio:DDURRY2Q224SBEA', 'pio:DMOTRY2Q224SBEA', 'pio:DFDHRY2Q224SBEA',
+  'pio:DREQRY2Q224SBEA', 'pio:DODGRY2Q224SBEA', 'pio:DNDGRY2Q224SBEA', 'pio:DFXARY2Q224SBEA', 'pio:DCLORY2Q224SBEA', 'pio:DGOERY2Q224SBEA',
+  'pio:DONGRY2Q224SBEA', 'pio:DSERRY2Q224SBEA', 'pio:DHCERY2Q224SBEA', 'pio:DHUTRY2Q224SBEA', 'pio:DHLCRY2Q224SBEA', 'pio:DTRSRY2Q224SBEA',
+  'pio:DRCARY2Q224SBEA', 'pio:DFSARY2Q224SBEA', 'pio:DIFSRY2Q224SBEA', 'pio:DOTSRY2Q224SBEA', 'pio:DNPIRY2Q224SBEA', 'pio:DNPERY2Q224SBEA',
+  'pio:DNPSRY2Q224SBEA', 'dca:A006RY2Q224SBEA', 'dca:A007RY2Q224SBEA', 'dca:A008RY2Q224SBEA', 'dca:A009RY2Q224SBEA', 'gdp:Y033RY2Q224SBEA',
+  'gdp:Y034RY2Q224SBEA', 'dca:B935RY2Q224SBEA', 'dca:A937RY2Q224SBEA', 'dca:A680RY2Q224SBEA', 'dca:A681RY2Q224SBEA', 'dca:A862RY2Q224SBEA',
+  'gdp:Y001RY2Q224SBEA', 'dca:B985RY2Q224SBEA', 'gdp:Y006RY2Q224SBEA', 'gdp:Y020RY2Q224SBEA', 'dca:A011RY2Q224SBEA', 'dca:A014RY2Q224SBEA',
+  'dca:B018RY2Q224SBEA', 'dca:A015RY2Q224SBEA', 'exp:A019RY2Q224SBEA', 'exp:A020RY2Q224SBEA', 'exp:A253RY2Q224SBEA', 'exp:A646RY2Q224SBEA',
+  'imp:A021RY2Q224SBEA', 'imp:A255RY2Q224SBEA', 'imp:A656RY2Q224SBEA', 'gov:A822RY2Q224SBEA', 'gov:A823RY2Q224SBEA', 'gov:A824RY2Q224SBEA',
+  'gov:A997RY2Q224SBEA', 'gov:A788RY2Q224SBEA', 'gov:A825RY2Q224SBEA', 'gov:A542RY2Q224SBEA', 'gov:A798RY2Q224SBEA', 'gov:A829RY2Q224SBEA',
+  'gov:A991RY2Q224SBEA', 'gov:A799RY2Q224SBEA',
+]);
+// 1.5.5 명목 GDP
+const NIPA_155 = nipaRows([
+  'gdp:GDP', 'pio:PCEC', 'pio:DGDSRC1Q027SBEA', 'pio:PCDG', 'pio:DMOTRC1Q027SBEA', 'pio:DFDHRC1Q027SBEA',
+  'pio:DREQRC1Q027SBEA', 'pio:DODGRC1Q027SBEA', 'pio:PCND', 'pio:DFXARC1Q027SBEA', 'pio:DCLORC1Q027SBEA', 'pio:DGOERC1Q027SBEA',
+  'pio:DONGRC1Q027SBEA', 'pio:PCESV', 'pio:DHCERC1Q027SBEA', 'pio:DHUTRC1Q027SBEA', 'pio:DHLCRC1Q027SBEA', 'pio:DTRSRC1Q027SBEA',
+  'pio:DRCARC1Q027SBEA', 'pio:DFSARC1Q027SBEA', 'pio:DIFSRC1Q027SBEA', 'pio:DOTSRC1Q027SBEA', 'pio:DNPIRC1Q027SBEA', 'pio:DNPERC1Q027SBEA',
+  'pio:DNPSRC1Q027SBEA', 'dca:GPDI', 'dca:FPI', 'dca:PNFI', 'dca:B009RC1Q027SBEA', 'dca:Y033RC1Q027SBEA',
+  'dca:Y034RC1Q027SBEA', 'dca:B935RC1Q027SBEA', 'dca:A937RC1Q027SBEA', 'dca:A680RC1Q027SBEA', 'dca:A681RC1Q027SBEA', 'dca:A862RC1Q027SBEA',
+  'dca:Y001RC1Q027SBEA', 'dca:B985RC1Q027SBEA', 'dca:Y006RC1Q027SBEA', 'dca:Y020RC1Q027SBEA', 'dca:PRFI', 'gdp:CBI',
+  'dca:B018RC1Q027SBEA', 'dca:A015RC1Q027SBEA', 'exp:NETEXP', 'exp:EXPGS', 'exp:A253RC1Q027SBEA', 'exp:A646RC1Q027SBEA',
+  'imp:IMPGS', 'imp:A255RC1Q027SBEA', 'imp:B656RC1Q027SBEA', 'gov:GCE', 'gov:FGCE', 'gov:FDEFX',
+  'gov:A997RC1Q027SBEA', 'gov:DGI', 'gov:FNDEFX', 'gov:A542RC1Q027SBEA', 'gov:NDGI', 'gov:SLCE',
+  'gov:A991RC1Q027SBEA', 'gov:SLINV',
+]);
+// 수준이 음수가 될 수 있어 증가율(%)이 의미 없는 줄 (재고 변동·농업·비농업, 순수출)
+const NIPA_NO_PCT = new Set([42, 43, 44, 45]);
 const FRED_TABLE = (eid) => `https://fred.stlouisfed.org/release/tables?rid=53&eid=${eid}`;
-const NIPA_112 = nipaRows([
-  'A191RL1Q225SBEA', 'DPCERY2Q224SBEA', 'DGDSRY2Q224SBEA', 'DDURRY2Q224SBEA', 'DNDGRY2Q224SBEA', 'DSERRY2Q224SBEA',
-  'A006RY2Q224SBEA', 'A007RY2Q224SBEA', 'A008RY2Q224SBEA', 'A009RY2Q224SBEA', 'Y033RY2Q224SBEA', 'Y001RY2Q224SBEA', 'A011RY2Q224SBEA',
-  'A014RY2Q224SBEA', 'A019RY2Q224SBEA', 'A020RY2Q224SBEA', 'A253RY2Q224SBEA', 'A646RY2Q224SBEA', 'A021RY2Q224SBEA', 'A255RY2Q224SBEA', 'A656RY2Q224SBEA',
-  'A822RY2Q224SBEA', 'A823RY2Q224SBEA', 'A824RY2Q224SBEA', 'A825RY2Q224SBEA', 'A829RY2Q224SBEA',
-], { 11: 'gdp', 12: 'gdp' });
-const NIPA_111 = [...nipaRows([
-  'A191RL1Q225SBEA', 'DPCERL1Q225SBEA', 'DGDSRL1Q225SBEA', 'DDURRL1Q225SBEA', 'DNDGRL1Q225SBEA', 'DSERRL1Q225SBEA',
-  'A006RL1Q225SBEA', 'A007RL1Q225SBEA', 'A008RL1Q225SBEA', 'A009RL1Q225SBEA', 'Y033RL1Q225SBEA', 'Y001RL1Q225SBEA', 'A011RL1Q225SBEA',
-  null, null, 'A020RL1Q158SBEA', 'A253RL1Q225SBEA', 'A646RL1Q225SBEA', 'A021RL1Q158SBEA', 'A255RL1Q225SBEA', 'A656RL1Q225SBEA',
-  'A822RL1Q225SBEA', 'A823RL1Q225SBEA', 'A824RL1Q225SBEA', 'A825RL1Q225SBEA', 'A829RL1Q225SBEA',
-]), [27, 'A191RP1Q027SBEA', 'gdp_quarterly', '(참고) 명목 GDP', 0, 'Gross domestic product, current dollars']];
-const NIPA_115 = nipaRows([
-  'GDP', 'PCEC', 'DGDSRC1Q027SBEA', 'PCDG', 'PCND', 'PCESV',
-  'GPDI', 'FPI', 'PNFI', 'B009RC1Q027SBEA', 'Y033RC1Q027SBEA', 'Y001RC1Q027SBEA', 'PRFI',
-  'CBI', 'NETEXP', 'EXPGS', 'A253RC1Q027SBEA', 'A646RC1Q027SBEA', 'IMPGS', 'A255RC1Q027SBEA', 'B656RC1Q027SBEA',
-  'GCE', 'FGCE', 'FDEFX', 'FNDEFX', 'SLCE',
-], { 14: 'gdp' });
 
 // ===== 사이드바 묶음 · 페이지 · 차트 정의 =====
 // group: 사이드바 묶음. sub: 하위 탭이 있는 페이지에서 차트가 속한 탭. bar: 막대 차트. unit: 축/툴팁 단위.
@@ -266,11 +343,11 @@ const PAGES = {
     // nipa: 발표표 블록 (rows = [줄, 티커, DB, 항목명, 단계, 영문]). 열은 기간 안의 분기, 최신이 오른쪽
     // src: FRED 원표 링크, modes: 기준 버튼(YoY/QoQ/원래 값) 표시
     nipa: [
-      { sub: 'us-gdp', id: 'nipa-112', title: '실질 GDP 성장률 기여도', unit: '%p', digits: 2, rows: NIPA_112, src: FRED_TABLE(12914),
+      { sub: 'us-gdp', id: 'nipa-112', title: '실질 GDP 성장률 기여도', unit: '%p', digits: 2, rows: NIPA_152, src: FRED_TABLE(13562),
         note: '전기 대비 연율(%). 1줄은 실질 GDP 성장률, 나머지는 성장률에 대한 기여도(%p)라 하위 항목을 더하면 위 항목이 돼요.' },
-      { sub: 'us-gdp', id: 'nipa-111', title: '실질 GDP 변동률', unit: '%', digits: 1, rows: NIPA_111, src: FRED_TABLE(38375),
-        note: '전기 대비 연율(%). 1줄이 헤드라인 성장률이에요. 재고 변동·순수출은 수준이 음수가 될 수 있어 BEA가 변동률을 내지 않아 비워 둬요.' },
-      { sub: 'us-gdp', id: 'nipa-115', title: '명목 GDP', unit: '십억 달러', digits: 1, rows: NIPA_115, src: FRED_TABLE(12998), modes: true,
+      { sub: 'us-gdp', id: 'nipa-111', title: '실질 GDP 변동률', unit: '%', digits: 1, rows: NIPA_151, src: FRED_TABLE(13498),
+        note: '전기 대비 연율(%). 1줄이 헤드라인 성장률이에요. 재고 변동·순수출은 수준이 음수가 될 수 있어 BEA가 변동률을 내지 않아 비워 둬요. ▸ 줄을 누르면 세부 항목이 펼쳐져요.' },
+      { sub: 'us-gdp', id: 'nipa-115', title: '명목 GDP', unit: '십억 달러', digits: 1, rows: NIPA_155, src: FRED_TABLE(14897), modes: true,
         note: '계절조정 연율. 원래 값 기준 소비 + 투자 + 순수출 + 정부 = GDP, 순수출 = 수출 − 수입. 재고 변동·순수출은 음수가 될 수 있어 증가율은 비워 둬요.' },
     ],
     charts: [
@@ -1061,7 +1138,11 @@ function drawPanel(panel, page) {
 // 하위 항목이 있는 줄은 ▾/▸ 로 접고 편다. modes 표는 YoY/QoQ(연율)/원래 값 기준을 고른다.
 const NIPA_MODES = [{ key: 'yoy', label: 'YoY (전년동기비)' }, { key: 'qoqa', label: 'QoQ (전기비 연율)' }, { key: 'raw', label: '원래 값' }];
 function nipaState(spec) {
-  if (!state.nipa[spec.id]) state.nipa[spec.id] = { mode: spec.modes ? 'yoy' : 'raw', collapsed: new Set() };
+  if (!state.nipa[spec.id]) {
+    // 처음엔 세부(새 줄)를 접어 둔다: 바로 아래 줄이 새 줄인 부모 줄을 접힌 상태로 시작
+    const collapsed = new Set(spec.rows.filter((r, i) => spec.rows[i + 1]?.[6] && spec.rows[i + 1][4] > r[4]).map((r) => r[0]));
+    state.nipa[spec.id] = { mode: spec.modes ? 'yoy' : 'raw', collapsed };
+  }
   return state.nipa[spec.id];
 }
 
@@ -1222,7 +1303,7 @@ function loadTable(name) {
 // 페이지에 필요한 DB 이름 (시장금리는 모든 만기)
 function tablesOf(page) {
   const fromCharts = PAGES[page].charts.flatMap((spec) => allDefs(spec).flatMap((def) => (def.calc ? def.calc.inputs.map((i) => i.table) : [tableOf(spec, def)])));
-  const fromNipa = (PAGES[page].nipa || []).flatMap((n) => n.rows.map((r) => r[2]));
+  const fromNipa = (PAGES[page].nipa || []).flatMap((n) => n.rows.map((r) => r[2]).filter(Boolean));
   return [...new Set([...fromCharts, ...(PAGES[page].panels || []).map((p) => p.table), ...fromNipa])];
 }
 
