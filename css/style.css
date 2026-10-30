@@ -183,3 +183,11 @@ p.note { margin: 0 0 4px; min-height: 1em; color: var(--text-muted); font-size: 
 /* 원표 링크 */
 p.note.src a { color: var(--accent); text-decoration: none; }
 p.note.src a:hover { text-decoration: underline; }
+/* 기간 직접 선택 (시작 월 ~ 끝 월) */
+.custom-range { align-items: center; }
+.custom-range .label { color: var(--text-secondary); font-size: 13px; }
+.custom-range input {
+  font: inherit; font-size: 13px; padding: 4px 8px;
+  border: 1px solid var(--border); border-radius: 6px; background: var(--surface-1); color: var(--text-primary);
+}
+.custom-range input:focus { outline: none; border-color: var(--accent); }

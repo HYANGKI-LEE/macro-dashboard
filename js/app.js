@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261030e';
+const VERSION = '20261030f';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -803,11 +803,15 @@ function valuesOf(table, def) {
   return def.indexTo ? indexTo({ dates, vals }, def.indexTo) : { dates, vals };
 }
 
-// 기간: 연도 하나(1.1~12.31), 'N년 이후', MAX(전체)
+// 기간: 연도 하나(1.1~12.31), 'N년 이후', MAX(전체), 직접 선택(시작 월 ~ 끝 월, 끝 월 포함)
 const RANGE_STARTS = [1990, 2000, 2010, 2020];
 const MAX_PERIOD = { key: 'max', label: 'MAX', from: -Infinity, to: Infinity };
 const sincePeriod = (y) => ({ key: `s${y}`, label: `${y}~`, from: Date.UTC(y, 0, 1), to: Infinity });
 const yearPeriod = (y) => ({ key: `y${y}`, label: `${y}`, from: Date.UTC(y, 0, 1), to: Date.UTC(y + 1, 0, 1), year: y });
+const customPeriod = (fy, fm, ty, tm) => ({
+  key: `c${fy}${fm}-${ty}${tm}`, label: `${fy}.${String(fm).padStart(2, '0')}~${ty}.${String(tm).padStart(2, '0')}`,
+  from: Date.UTC(fy, fm - 1, 1), to: Date.UTC(ty, tm, 1),
+});
 const periodName = (p) => (p.year ? `${p.year}년` : p.label);
 
 function pointsInPeriod({ dates, vals }, { from, to }) {
@@ -1322,6 +1326,50 @@ function updatedText(page) {
   return parts.length ? `데이터 기준: ${parts.join(' · ')}` : '';
 }
 
+// 페이지 차트 데이터의 처음·마지막 날짜
+function dataSpan(page) {
+  let first = Infinity;
+  let last = -Infinity;
+  eachSeries(page, ({ dates, vals }) => {
+    const i = vals.findIndex((v) => v !== null);
+    if (i < 0) return;
+    let j = vals.length - 1;
+    while (vals[j] === null) j--;
+    first = Math.min(first, dates[i]);
+    last = Math.max(last, dates[j]);
+  });
+  return { first, last };
+}
+
+// 직접 선택: 시작·끝 월 입력. 버튼으로 기간을 고르면 입력칸도 그 기간으로 맞춘다 (끝은 기본 최신).
+function customRange(container, page, onPick) {
+  const { first, last } = dataSpan(page);
+  if (!Number.isFinite(first)) return () => {};
+  const month = (t) => new Date(t).toISOString().slice(0, 7);
+  const row = document.createElement('div');
+  row.className = 'btn-group custom-range';
+  row.innerHTML = `<span class="label">직접 선택</span>
+    <input type="month" class="from" min="${month(first)}" max="${month(last)}"> <span class="label">~</span>
+    <input type="month" class="to" min="${month(first)}" max="${month(last)}">`;
+  container.appendChild(row);
+  const [from, to] = row.querySelectorAll('input');
+  const sync = (p) => {
+    from.value = month(Math.max(first, Number.isFinite(p.from) ? p.from : first));
+    to.value = month(Math.min(last, Number.isFinite(p.to) ? p.to - 1 : last));
+  };
+  const apply = () => {
+    if (!from.value || !to.value) return;
+    const [a, b] = [from.value, to.value].sort();
+    const [fy, fm] = a.split('-').map(Number);
+    const [ty, tm] = b.split('-').map(Number);
+    container.querySelectorAll('button').forEach((x) => x.classList.remove('active'));
+    onPick(customPeriod(fy, fm, ty, tm));
+  };
+  from.onchange = apply;
+  to.onchange = apply;
+  return sync;
+}
+
 function setupFilters(page) {
   document.getElementById(`updated-${page}`).textContent = updatedText(page);
   if (!PAGES[page].charts.length) return;
@@ -1329,7 +1377,11 @@ function setupFilters(page) {
   const ranges = [MAX_PERIOD, ...RANGE_STARTS.map(sincePeriod)];
   // 기본 기간: defaultPeriod(예: 's2000') 가 있으면 그것, 없으면 가장 최근 연도
   state.period[page] = ranges.find((r) => r.key === PAGES[page].defaultPeriod) || singles[singles.length - 1] || MAX_PERIOD;
-  buttons(document.querySelector(`[data-years="${page}"]`), [ranges, singles], state.period[page].key, (p) => { state.period[page] = p; renderPage(page); });
+  const years = document.querySelector(`[data-years="${page}"]`);
+  let sync = () => {};
+  buttons(years, [ranges, singles], state.period[page].key, (p) => { state.period[page] = p; sync(p); renderPage(page); });
+  sync = customRange(years, page, (p) => { state.period[page] = p; renderPage(page); });
+  sync(state.period[page]);
   (PAGES[page].panels || []).forEach((p) => {
     const modes = [{ key: 'mom', label: 'MoM (전월비)' }, { key: 'yoy', label: 'YoY (전년비)' }];
     buttons(document.querySelector(`[data-mode="${p.id}"]`), [modes], panelState(p).mode, (m) => { panelState(p).mode = m.key; drawPanel(p, page); });
