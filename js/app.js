@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261030k';
+const VERSION = '20261030l';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -357,7 +357,7 @@ const FRED_TABLE = (eid) => `https://fred.stlouisfed.org/release/tables?rid=53&e
 // heading: 이 차트 앞에 소제목 줄을 넣고 새 줄부터 시작 (예: '연체잔액비중 : 상품별').
 const GROUPS = [['oil', '유가'], ['us', '미국'], ['kr', '한국']];
 // 사이드바 순서 (Bloomberg ECST 분류 기준). 하위 페이지(parent)는 상위 바로 뒤에. 여기 없는 페이지는 그 뒤에 정의 순서대로
-const NAV_ORDER = ['growth', 'gdp', 'inflation', 'labor', 'industry', 'business', 'household', 'hhbs', 'housing',
+const NAV_ORDER = ['growth', 'gdp', 'flow', 'inflation', 'labor', 'industry', 'business', 'household', 'housing',
   'trade', 'fiscal', 'money', 'finance', 'credit', 'rates'];
 
 const PAGES = {
@@ -794,20 +794,22 @@ const PAGES = {
   // 기업/생산: 제조업 = Census M3 내구재 주문 (FRED 월별, 계절조정)
   // panels: 차트 그리드 아래 전체 폭 블록 (MoM/YoY 버튼 + 선택 업종 추이 차트 + 변동률 표)
   industry: { group: 'us', title: '산업', charts: [] },
-  household: { group: 'us', title: '개인·가계', charts: [] },
-  hhbs: {
+  household: { group: 'us', title: '개인·가계', desc: '준비 중이에요.', charts: [] },
+  // 금융 계정(자금흐름): 연준 Financial Accounts(Z.1). 하위 탭 = 부문별 대차대조표
+  flow: {
     group: 'us',
-    parent: 'household',
-    title: '가계 대차대조표',
-    desc: '연준 Financial Accounts(Z.1) 표 S1M.b 기준 — fred 리포 Z.1 가계 DB를 바로 읽어요. 분기 말 잔액, 계절조정 없음.',
+    parent: 'growth',
+    title: '금융 계정(자금흐름)',
+    desc: '연준 Financial Accounts(Z.1) 기준 — fred 리포 Z.1 DB를 바로 읽어요. 분기 말 잔액, 계절조정 없음.',
+    subtabs: [['hh', '가계 및 비영리기관']],
     defaultPeriod: 's2020',
     nipa: [
-      { id: 'nipa-s1mb', title: '가계·비영리단체 대차대조표', unit: '십억 달러', digits: 1, rows: Z1_S1MB, modes: true,
+      { sub: 'hh', id: 'nipa-s1mb', title: '가계·비영리단체 대차대조표', unit: '십억 달러', digits: 1, rows: Z1_S1MB, modes: true,
         src: 'https://fred.stlouisfed.org/release/tables?rid=52&eid=1256192', scale: 0.001, noScale: new Set([52, 54]), noPct: new Set([52, 54]), sep: [43], memoFrom: 43,
         note: '분기 말 잔액(FRED 백만 달러 → 십억 달러). 자산 − 부채 = 순자산. 43줄부터는 참고 항목이에요. ▸ 줄을 누르면 세부 항목이 펼쳐져요.' },
     ],
     charts: [
-      { id: 'chart-hhbs', title: '가계 자산·부채·순자산', table: 'z1hh_quarterly', unit: '조 달러', digits: 1, defs: [
+      { sub: 'hh', id: 'chart-hhbs', title: '가계 자산·부채·순자산', table: 'z1hh_quarterly', unit: '조 달러', digits: 1, defs: [
         { color: '--slot-1', label: '자산', exact: 'TABSHNO', scale: 1e-6 },
         { color: '--slot-3', label: '부채', exact: 'TLBSHNO', scale: 1e-6 },
         { color: '--base-rate', label: '순자산', exact: 'TNWBSHNO', scale: 1e-6 },
@@ -897,7 +899,7 @@ const PAGES = {
 // ===== 상태 =====
 // panel: 패널 id → { mode: 'mom'|'yoy', slots: Map(티커 → 색 번호) }
 // nipa: 발표표 id → { mode: 'yoy'|'qoqa'|'raw', collapsed: Set(접은 줄 번호) }
-const state = { data: {}, page: 'rates', sub: { rates: 'main', gdp: 'chg', credit: 'leverage' }, period: {}, tenor: 10, legend: {}, ready: {}, panel: {}, nipa: {} };
+const state = { data: {}, page: 'rates', sub: { rates: 'main', gdp: 'chg', flow: 'hh', credit: 'leverage' }, period: {}, tenor: 10, legend: {}, ready: {}, panel: {}, nipa: {} };
 const charts = {};
 
 // ===== 유틸 =====
