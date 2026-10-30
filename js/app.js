@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261030h';
+const VERSION = '20261030i';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -402,7 +402,7 @@ const PAGES = {
     parent: 'growth',
     title: 'GDP',
     desc: 'BEA 국민계정 발표표(FRED release 53) 기준 — fred 리포 NIPA 항목 DB를 바로 읽어요. 표는 최신 분기가 오른쪽이에요.',
-    subtabs: [['chg', '변동'], ['contrib', '기여도'], ['core', 'Core GDP'], ['gdi', 'GDI'], ['nominal', '명목 GDP']],
+    subtabs: [['chg', '변동'], ['contrib', '기여도'], ['core', 'Core GDP'], ['gdi', 'GDI']],
     defaultPeriod: 's2020',
     // nipa: 발표표 블록 (rows = [줄, 티커, DB, 항목명, 단계, 영문, 새 줄]). 열은 기간 안의 분기, 최신이 오른쪽
     // src: FRED 원표 링크, modes: 기준 버튼(YoY/QoQ/원래 값) 표시, noPct: 음수가 될 수 있어 증가율을 비우는 줄
@@ -416,7 +416,7 @@ const PAGES = {
         note: '전기 대비 연율(%). Core GDP(8줄) = 개인소비 + 민간 고정투자. 변동이 큰 순수출·재고·정부를 빼서 민간 수요의 기조를 봐요. 재고 변동은 BEA가 변동률을 내지 않아 비워 둬요. 7줄부터는 참고 항목이에요.' },
       { sub: 'gdi', id: 'nipa-110', title: '국내총소득 (GDI)', unit: '십억 달러', digits: 1, rows: NIPA_110, src: FRED_TABLE(17636), modes: true, noPct: new Set([19, 20, 24]),
         note: '계절조정 연율. 소득 쪽에서 잰 GDP로, GDP − GDI = 통계적 불일치(24줄). 기업이익은 한 달 늦게 나와 속보치 분기엔 GDI·순영업잉여·기업이익이 비어 있어요. 음수가 될 수 있는 줄은 증가율을 비워 둬요.' },
-      { sub: 'nominal', id: 'nipa-115', title: '명목 GDP', unit: '십억 달러', digits: 1, rows: NIPA_155, src: FRED_TABLE(14897), modes: true, noPct: NIPA_NO_PCT,
+      { sub: 'chg', id: 'nipa-115', title: '명목 GDP', unit: '십억 달러', digits: 1, rows: NIPA_155, src: FRED_TABLE(14897), modes: true, noPct: NIPA_NO_PCT,
         note: '계절조정 연율. 원래 값 기준 소비 + 투자 + 순수출 + 정부 = GDP, 순수출 = 수출 − 수입. 재고 변동·순수출은 음수가 될 수 있어 증가율은 비워 둬요.' },
     ],
     charts: [
