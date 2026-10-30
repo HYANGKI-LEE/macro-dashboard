@@ -17,4 +17,4 @@ FRED 스크립트는 로컬 `.env` 의 `FRED_API_KEY` 를 쓴다(git 제외).
    (`scripts/autopush.ps1` 이 이 과정을 자동으로 함)
 
 ## 화면 구성
-`js/app.js` 의 `GROUPS`(사이드바 묶음: 유가 / 미국 / 한국)와 `PAGES`(페이지·차트) 설정으로 만든다.
+`js/app.js` 의 `GROUPS`(사이드바 묶음: 미국)와 `PAGES`(페이지·차트) 설정으로 만든다.

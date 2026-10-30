@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261030l';
+const VERSION = '20261030m';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -355,22 +355,12 @@ const FRED_TABLE = (eid) => `https://fred.stlouisfed.org/release/tables?rid=53&e
 // group: 사이드바 묶음. sub: 하위 탭이 있는 페이지에서 차트가 속한 탭. bar: 막대 차트. unit: 축/툴팁 단위.
 // wide: 그리드 한 줄 전체 폭으로 그림 (추이가 촘촘한 막대 차트 등).
 // heading: 이 차트 앞에 소제목 줄을 넣고 새 줄부터 시작 (예: '연체잔액비중 : 상품별').
-const GROUPS = [['oil', '유가'], ['us', '미국'], ['kr', '한국']];
+const GROUPS = [['us', '미국']];
 // 사이드바 순서 (Bloomberg ECST 분류 기준). 하위 페이지(parent)는 상위 바로 뒤에. 여기 없는 페이지는 그 뒤에 정의 순서대로
 const NAV_ORDER = ['growth', 'gdp', 'flow', 'inflation', 'labor', 'industry', 'business', 'household', 'housing',
   'trade', 'fiscal', 'money', 'finance', 'credit', 'rates'];
 
 const PAGES = {
-  oil: {
-    group: 'oil',
-    title: '유가',
-    desc: '인포맥스 일별 데이터 기준.',
-    charts: [
-      { id: 'chart-wti', title: 'WTI 현물 가격', table: INFO_D, unit: '달러/배럴', digits: 2, defs: [
-        { color: '--slot-1', label: 'WTI', prefix: '미국:WTI' },
-      ] },
-    ],
-  },
   rates: {
     group: 'us',
     title: '금리',

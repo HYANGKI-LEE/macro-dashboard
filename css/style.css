@@ -59,7 +59,7 @@ body {
 .sidebar nav a.has-sub { display: flex; align-items: center; justify-content: space-between; }
 .nav-fold { padding: 0 6px; border-radius: 4px; font-size: 11px; color: var(--text-muted); cursor: pointer; }
 .nav-fold:hover { background: var(--border); color: var(--text-primary); }
-/* 사이드바 묶음 (유가 / 미국 / 한국) */
+/* 사이드바 묶음 (미국) */
 .nav-group { padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
 .nav-group:last-child { border-bottom: 0; }
 .nav-group-title { display: flex; align-items: baseline; gap: 6px; padding: 4px 12px 8px; font-size: 13px; color: var(--text-muted); }
