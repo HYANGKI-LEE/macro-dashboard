@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261030c';
+const VERSION = '20261030d';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -273,6 +273,39 @@ const PAGES = {
         { color: '--slot-4', label: '정부', exact: 'A822RY2Q224SBEA', table: 'gov_quarterly' },
         { color: '--base-rate', label: '실질 GDP 성장률', exact: 'A191RL1Q225SBEA', line: true },
       ], note: '막대 = 항목별 기여도(%p), 선 = 실질 GDP 성장률(전기 대비 연율, %)' },
+      // 항목별 기여도 추이 (2열): 상위 항목 = 검정 선, 하위 항목 = 색 선, 더 깊은 하위는 회색 점선(범례 클릭으로 표시)
+      { sub: 'us-gdp', id: 'chart-gdp-pce', heading: '항목별 기여도 추이', title: '개인소비지출', src: FRED_TABLE(12914), table: 'pio_quarterly', unit: '%p', digits: 2, defs: [
+        { color: '--base-rate', label: '개인소비지출', exact: 'DPCERY2Q224SBEA' },
+        { color: '--slot-1', label: '상품', exact: 'DGDSRY2Q224SBEA' },
+        { color: '--slot-2', label: '서비스', exact: 'DSERRY2Q224SBEA' },
+        { other: true, hidden: true, dash: 'dashed', label: '내구재', exact: 'DDURRY2Q224SBEA' },
+        { other: true, hidden: true, dash: 'dotted', label: '비내구재', exact: 'DNDGRY2Q224SBEA' },
+      ], note: '실질 GDP 성장률에 대한 기여도(%p, 전기 대비 연율)' },
+      { sub: 'us-gdp', id: 'chart-gdp-inv', title: '민간총투자', src: FRED_TABLE(12914), table: 'dca_quarterly', unit: '%p', digits: 2, defs: [
+        { color: '--base-rate', label: '민간총투자', exact: 'A006RY2Q224SBEA' },
+        { color: '--slot-1', label: '비주거', exact: 'A008RY2Q224SBEA' },
+        { color: '--slot-2', label: '주거', exact: 'A011RY2Q224SBEA' },
+        { color: '--slot-3', label: '재고 변동', exact: 'A014RY2Q224SBEA' },
+        { other: true, hidden: true, dash: 'dashed', label: '구조물', exact: 'A009RY2Q224SBEA' },
+        { other: true, hidden: true, dash: 'dotted', label: '장비', exact: 'Y033RY2Q224SBEA', table: 'gdp_quarterly' },
+        { other: true, hidden: true, dash: [8, 3, 2, 3], label: '지식재산', exact: 'Y001RY2Q224SBEA', table: 'gdp_quarterly' },
+      ], note: '고정투자 = 비주거 + 주거. 구조물·장비·지식재산(비주거 하위)은 범례 클릭으로 표시' },
+      { sub: 'us-gdp', id: 'chart-gdp-nx', title: '순수출', src: FRED_TABLE(12914), table: 'exp_quarterly', unit: '%p', digits: 2, defs: [
+        { color: '--base-rate', label: '순수출', exact: 'A019RY2Q224SBEA' },
+        { color: '--slot-1', label: '수출', exact: 'A020RY2Q224SBEA' },
+        { color: '--slot-2', label: '수입', exact: 'A021RY2Q224SBEA', table: 'imp_quarterly' },
+        { other: true, hidden: true, dash: 'dashed', label: '수출 상품', exact: 'A253RY2Q224SBEA' },
+        { other: true, hidden: true, dash: 'dotted', label: '수출 서비스', exact: 'A646RY2Q224SBEA' },
+        { other: true, hidden: true, dash: [8, 3, 2, 3], label: '수입 상품', exact: 'A255RY2Q224SBEA', table: 'imp_quarterly' },
+        { other: true, hidden: true, dash: [2, 6], label: '수입 서비스', exact: 'A656RY2Q224SBEA', table: 'imp_quarterly' },
+      ], note: '수입이 늘면 기여도는 음수. 상품·서비스 세부는 범례 클릭으로 표시' },
+      { sub: 'us-gdp', id: 'chart-gdp-gov', title: '정부 소비·투자', src: FRED_TABLE(12914), table: 'gov_quarterly', unit: '%p', digits: 2, defs: [
+        { color: '--base-rate', label: '정부 소비·투자', exact: 'A822RY2Q224SBEA' },
+        { color: '--slot-1', label: '연방', exact: 'A823RY2Q224SBEA' },
+        { color: '--slot-2', label: '주·지방', exact: 'A829RY2Q224SBEA' },
+        { other: true, hidden: true, dash: 'dashed', label: '국방', exact: 'A824RY2Q224SBEA' },
+        { other: true, hidden: true, dash: 'dotted', label: '비국방', exact: 'A825RY2Q224SBEA' },
+      ], note: '연방 = 국방 + 비국방. 세부는 범례 클릭으로 표시' },
       // Main(분기) 'GDP 성장률' 차트와 같은 국가 구성
       { sub: 'main', id: 'chart-gdp', title: '주요국 GDP 성장률 추이', table: INFO_Q, unit: '%', defs: [
         { key: 'kr', label: '한국', prefix: '한국:' },
