@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261030d';
+const VERSION = '20261030e';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -161,6 +161,12 @@ const NIPA_112 = nipaRows([
   'A014RY2Q224SBEA', 'A019RY2Q224SBEA', 'A020RY2Q224SBEA', 'A253RY2Q224SBEA', 'A646RY2Q224SBEA', 'A021RY2Q224SBEA', 'A255RY2Q224SBEA', 'A656RY2Q224SBEA',
   'A822RY2Q224SBEA', 'A823RY2Q224SBEA', 'A824RY2Q224SBEA', 'A825RY2Q224SBEA', 'A829RY2Q224SBEA',
 ], { 11: 'gdp', 12: 'gdp' });
+const NIPA_111 = [...nipaRows([
+  'A191RL1Q225SBEA', 'DPCERL1Q225SBEA', 'DGDSRL1Q225SBEA', 'DDURRL1Q225SBEA', 'DNDGRL1Q225SBEA', 'DSERRL1Q225SBEA',
+  'A006RL1Q225SBEA', 'A007RL1Q225SBEA', 'A008RL1Q225SBEA', 'A009RL1Q225SBEA', 'Y033RL1Q225SBEA', 'Y001RL1Q225SBEA', 'A011RL1Q225SBEA',
+  null, null, 'A020RL1Q158SBEA', 'A253RL1Q225SBEA', 'A646RL1Q225SBEA', 'A021RL1Q158SBEA', 'A255RL1Q225SBEA', 'A656RL1Q225SBEA',
+  'A822RL1Q225SBEA', 'A823RL1Q225SBEA', 'A824RL1Q225SBEA', 'A825RL1Q225SBEA', 'A829RL1Q225SBEA',
+]), [27, 'A191RP1Q027SBEA', 'gdp_quarterly', '(참고) 명목 GDP', 0, 'Gross domestic product, current dollars']];
 const NIPA_115 = nipaRows([
   'GDP', 'PCEC', 'DGDSRC1Q027SBEA', 'PCDG', 'PCND', 'PCESV',
   'GPDI', 'FPI', 'PNFI', 'B009RC1Q027SBEA', 'Y033RC1Q027SBEA', 'Y001RC1Q027SBEA', 'PRFI',
@@ -262,6 +268,8 @@ const PAGES = {
     nipa: [
       { sub: 'us-gdp', id: 'nipa-112', title: '실질 GDP 성장률 기여도', unit: '%p', digits: 2, rows: NIPA_112, src: FRED_TABLE(12914),
         note: '전기 대비 연율(%). 1줄은 실질 GDP 성장률, 나머지는 성장률에 대한 기여도(%p)라 하위 항목을 더하면 위 항목이 돼요.' },
+      { sub: 'us-gdp', id: 'nipa-111', title: '실질 GDP 변동률', unit: '%', digits: 1, rows: NIPA_111, src: FRED_TABLE(38375),
+        note: '전기 대비 연율(%). 1줄이 헤드라인 성장률이에요. 재고 변동·순수출은 수준이 음수가 될 수 있어 BEA가 변동률을 내지 않아 비워 둬요.' },
       { sub: 'us-gdp', id: 'nipa-115', title: '명목 GDP', unit: '십억 달러', digits: 1, rows: NIPA_115, src: FRED_TABLE(12998), modes: true,
         note: '계절조정 연율. 원래 값 기준 소비 + 투자 + 순수출 + 정부 = GDP, 순수출 = 수출 − 수입. 재고 변동·순수출은 음수가 될 수 있어 증가율은 비워 둬요.' },
     ],
@@ -1058,7 +1066,7 @@ function drawNipa(spec, page) {
   const { mode, collapsed } = nipaState(spec);
   const pct = mode !== 'raw';
   const rows = spec.rows.map((row) => {
-    const v = pct && NIPA_NO_PCT.has(row[0]) ? null : valuesOf(state.data[row[2]], { exact: row[1], transform: pct ? mode : undefined });
+    const v = !row[1] || (pct && NIPA_NO_PCT.has(row[0])) ? null : valuesOf(state.data[row[2]], { exact: row[1], transform: pct ? mode : undefined });
     return { row, at: new Map(v ? pointsInPeriod(v, period) : []) };
   });
   // 위계: 각 줄의 상위 줄 목록, 하위 항목 유무
@@ -1081,7 +1089,7 @@ function drawNipa(spec, page) {
     <tbody>${rows.map(({ row: [line, t, , name, level, en], at }, i) => {
       const hidden = parents[i].some((l) => collapsed.has(l));
       const toggle = hasKids(i) ? `<span class="fold">${collapsed.has(line) ? '▸' : '▾'}</span>` : '<span class="fold"></span>';
-      return `<tr class="lv${level}${hasKids(i) ? ' parent' : ''}" data-line="${line}"${hidden ? ' hidden' : ''}><td class="line">${line}</td><th class="name" title="${en} (${t})">${toggle}${name}</th>${quarters.map((q) => cell(at.get(q))).join('')}</tr>`;
+      return `<tr class="lv${level}${hasKids(i) ? ' parent' : ''}" data-line="${line}"${hidden ? ' hidden' : ''}><td class="line">${line}</td><th class="name" title="${en}${t ? ` (${t})` : ''}">${toggle}${name}</th>${quarters.map((q) => cell(at.get(q))).join('')}</tr>`;
     }).join('')}</tbody>`;
   el.querySelectorAll('tbody tr.parent').forEach((tr) => {
     tr.onclick = () => {
@@ -1095,7 +1103,7 @@ function drawNipa(spec, page) {
     wrap.scrollLeft = wrap.scrollWidth;
     wrap.dataset.view = `${period.key}/${mode}`;
   }
-  const missing = rows.filter((r) => !r.at.size && !(pct && NIPA_NO_PCT.has(r.row[0]))).map((r) => r.row[1]);
+  const missing = rows.filter((r) => r.row[1] && !r.at.size && !(pct && NIPA_NO_PCT.has(r.row[0]))).map((r) => r.row[1]);
   document.getElementById(`note-${spec.id}`).textContent = [spec.note, missing.length ? `${periodName(period)} 값 없음: ${missing.join(', ')}` : ''].filter(Boolean).join(' · ');
 }
 
@@ -1225,7 +1233,7 @@ function seriesFor(table) {
       }
     }
     (cfg.panels || []).filter((p) => p.table === table).forEach((p) => p.rows.forEach(([t]) => out.add(t)));
-    (cfg.nipa || []).forEach((n) => n.rows.filter((r) => r[2] === table).forEach((r) => out.add(r[1])));
+    (cfg.nipa || []).forEach((n) => n.rows.filter((r) => r[1] && r[2] === table).forEach((r) => out.add(r[1])));
   }
   return [...out];
 }
