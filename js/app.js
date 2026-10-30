@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261030n';
+const VERSION = '20261030o';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -37,6 +37,7 @@ const LONG_DB = {
   gov_quarterly: { url: `${FRED_REPO_DB}us_macro_NIPA_Govt_Receipts_Expenditures.db.gz`, obs: 'obs_quarterly' },
   gdi_quarterly: { url: `${FRED_REPO_DB}us_macro_NIPA_GDI.db.gz`, obs: 'obs_quarterly' },
   z1hh_quarterly: { url: `${FRED_REPO_DB}us_macro_Z1_Households_BS.db.gz`, obs: 'obs_quarterly' },
+  z1nfc_quarterly: { url: `${FRED_REPO_DB}us_macro_Z1_Nonfin_Corp_BS.db.gz`, obs: 'obs_quarterly' },
 };
 const freqOf = (table) => table.split('_')[1];
 
@@ -349,6 +350,68 @@ const Z1_S1MB = [
   ['OEHRENWBSHNO', '주택 순자산 (자가 보유분)', 0, 'Households; owners\' equity in real estate'],
   ['HOEREPHRE', '주택가치 대비 순자산 (%)', 0, 'Households; owners\' equity in real estate as a percentage of household real estate'],
 ].map(([t, name, level, en, isNew], i) => [i + 1, t, 'z1hh_quarterly', name, level, en, !!isNew]);
+// Z.1 S11.1.b 비금융기업 대차대조표 (예전 표 번호 B.103). 47줄부터 참고 항목. [티커, 항목명, 단계, 영문, 처음에 접힘]
+const Z1_S111B = [
+  ['TABSNNCB', '자산', 0, 'Nonfinancial corporate business; total assets'],
+  ['BOGZ1LM102010005Q', '비금융자산', 1, 'Nonfinancial corporate business; nonfinancial assets'],
+  ['NCBREMV', '부동산 (시가)', 2, 'Nonfinancial corporate business; real estate at market value'],
+  ['BOGZ1LM105015205Q', '장비 (대체원가)', 2, 'Nonfinancial corporate business; equipment, current cost basis'],
+  ['BOGZ1LM105013765Q', '지식재산 (대체원가)', 2, 'Nonfinancial corporate business; nonresidential intellectual property products, current cost basis'],
+  ['BOGZ1LM105020015Q', '재고 (대체원가)', 2, 'Nonfinancial corporate business; inventories excluding IVA, current cost basis'],
+  ['TFAABSNNCB', '금융자산', 1, 'Nonfinancial corporate business; total financial assets'],
+  ['BOGZ1FL103020005Q', '요구불예금·현금', 2, 'Nonfinancial corporate business; checkable deposits and currency; asset'],
+  ['TSDABSNNCB', '정기·저축성 예금', 2, 'Nonfinancial corporate business; total time and savings deposits; asset'],
+  ['FDABSNNCB', '기타 예금 (해외 예금)', 2, 'Nonfinancial corporate business; private foreign deposits; asset'],
+  ['BOGZ1LM104022005Q', '채권', 2, 'Nonfinancial corporate business; debt securities; asset'],
+  ['CPABSNNCB', '기업어음(CP)', 3, 'Nonfinancial corporate business; commercial paper; asset', 1],
+  ['BOGZ1LM103061103Q', '국채', 3, 'Nonfinancial corporate business; Treasury securities; asset', 1],
+  ['BOGZ1LM103061703Q', '정부기관·GSE 채권', 3, 'Nonfinancial corporate business; agency- and GSE-backed securities; asset', 1],
+  ['BOGZ1LM103062003Q', '지방채', 3, 'Nonfinancial corporate business; municipal securities; asset', 1],
+  ['BOGZ1LM123063003Q', '회사채 (리츠 보유분)', 3, 'Equity real estate investment trusts; corporate and foreign bonds; asset', 1],
+  ['NCBTLSQ027S', '대출채권', 2, 'Nonfinancial corporate business; total loans; asset'],
+  ['SRPSABSNNCB', '환매조건부채권(RP)', 3, 'Nonfinancial corporate business; security repurchase agreements; asset', 1],
+  ['CCABSNNCB', '소비자신용', 3, 'Nonfinancial corporate business; consumer credit; asset', 1],
+  ['BOGZ1FL103065005Q', '모기지', 3, 'Nonfinancial corporate business; total mortgages; asset', 1],
+  ['BOGZ1LM103064103Q', '주식', 2, 'Nonfinancial corporate business; corporate equities; asset'],
+  ['BOGZ1LM103092105Q', '해외직접투자: 지분', 2, 'Nonfinancial corporate business; U.S. direct investment abroad: equity; asset (market value)'],
+  ['NCBMTSQ027S', 'GSE 지분', 2, 'Nonfinancial corporate business; equity in Fannie Mae and Farm Credit System; asset'],
+  ['BOGZ1FL103034000Q', 'MMF', 2, 'Nonfinancial corporate business; money market fund shares; asset'],
+  ['NCBMFSA', '뮤추얼펀드', 2, 'Nonfinancial corporate business; mutual fund shares; asset'],
+  ['TRABSNNCB', '매출채권', 2, 'Nonfinancial corporate business; trade receivables; asset'],
+  ['BOGZ1LM103092305Q', '해외직접투자: 기업 간 채무', 2, 'Nonfinancial corporate business; U.S. direct investment abroad: intercompany debt (market value)'],
+  ['MAABSNNCB', '기타 자산', 2, 'Nonfinancial corporate business; total miscellaneous assets'],
+  ['NCBLEYQ027S', '부채와 자본 합계', 0, 'Nonfinancial corporate business; total liabilities and equity'],
+  ['TLBSNNCB', '부채', 1, 'Nonfinancial corporate business; total liabilities'],
+  ['NCBDBIQ027S', '채권', 2, 'Nonfinancial corporate business; debt securities; liability'],
+  ['CPLBSNNCB', '기업어음(CP)', 3, 'Nonfinancial corporate business; commercial paper; liability'],
+  ['MSLBSNNCB', '지방채 (산업수입채)', 3, 'Nonfinancial corporate business; municipal securities; liability'],
+  ['BOGZ1FL103163005Q', '회사채', 3, 'Nonfinancial corporate business; corporate bonds; liability'],
+  ['NCBLILQ027S', '대출', 2, 'Nonfinancial corporate business; total loans; liability'],
+  ['BLNECLBSNNCB', '예금기관 기타 대출', 3, 'Nonfinancial corporate business; depository institution loans n.e.c.; liability'],
+  ['BOGZ1FL103167205Q', '사모대출', 3, 'Nonfinancial corporate business; private credit loans; liability'],
+  ['OLALBSNNCB', '기타 대출', 3, 'Nonfinancial corporate business; other loans and advances; liability'],
+  ['MLBSNNCB', '모기지', 3, 'Nonfinancial corporate business; total mortgages; liability'],
+  ['TPLBSNNCB', '매입채무', 2, 'Nonfinancial corporate business; trade payables; liability'],
+  ['BOGZ1FL103178005Q', '미지급 세금', 2, 'Nonfinancial corporate business; total taxes payable; liability'],
+  ['BOGZ1LM103192305Q', '외국인직접투자: 기업 간 채무', 2, 'Nonfinancial corporate business; foreign direct investment in U.S.: intercompany debt; liability (market value)'],
+  ['MLLBSNNCB', '기타 부채', 2, 'Nonfinancial corporate business; total miscellaneous liabilities'],
+  ['BOGZ1LM103181105Q', '자본 (시가)', 1, 'Nonfinancial corporate business; total equity; liability (IMA)'],
+  ['NCBCEL', '주식', 2, 'Nonfinancial corporate business; corporate equities; liability'],
+  ['BOGZ1LM103192105Q', '외국인직접투자: 지분', 2, 'Nonfinancial corporate business; foreign direct investment in U.S.; liability (market value)'],
+  ['TNWMVBSNNCB', '순자산 (자산 − 부채)', 0, 'Nonfinancial corporate business; net worth'],
+  ['NCBCEPNW', '자본/순자산 (%)', 0, 'Nonfinancial corporate business; corporate equities as a percentage of net worth'],
+  ['NCBCMDPMVCE', '부채/자본 (%)', 0, 'Nonfinancial corporate business; debt as a percentage of the market value of corporate equities'],
+  ['NCBCMDPNWMV', '부채/순자산 (%)', 0, 'Nonfinancial corporate business; debt as a percentage of net worth (market value)'],
+  ['TATASHCBSNNCB', '자산 (비금융자산 취득원가 기준)', 0, 'Nonfinancial corporate business; total assets at historical cost'],
+  ['TTAATASHCBSHNNCB', '비금융자산 (취득원가)', 1, 'Nonfinancial corporate business; nonfinancial assets at historical cost'],
+  ['REATASHCBSNNCB', '부동산', 2, 'Nonfinancial corporate business; real estate, historical cost basis', 1],
+  ['ESATASHCBSNNCB', '장비', 2, 'Nonfinancial corporate business; nonresidential equipment, historical cost basis', 1],
+  ['NCBNIPPHCB', '지식재산', 2, 'Nonfinancial corporate business; nonresidential intellectual property products, historical cost basis', 1],
+  ['IATASHCBSNNCB', '재고', 2, 'Nonfinancial corporate business; inventories, historical cost basis (SOI)', 1],
+  ['TNWHCBSNNCB', '순자산 (취득원가 기준)', 0, 'Nonfinancial corporate business; net worth at historical cost'],
+  ['HCVSRNWCHBSNNCB', '구조물 취득원가: 주거용', 0, 'Nonfinancial corporate business; residential structures, historical cost basis'],
+  ['HCVSNNWHCBSNNCB', '구조물 취득원가: 비주거용', 0, 'Nonfinancial corporate business; nonresidential structures, historical cost basis'],
+].map(([t, name, level, en, isNew], i) => [i + 1, t, 'z1nfc_quarterly', name, level, en, !!isNew]);
 const FRED_TABLE = (eid) => `https://fred.stlouisfed.org/release/tables?rid=53&eid=${eid}`;
 
 // ===== 사이드바 묶음 · 페이지 · 차트 정의 =====
@@ -785,18 +848,21 @@ const PAGES = {
   // panels: 차트 그리드 아래 전체 폭 블록 (MoM/YoY 버튼 + 선택 업종 추이 차트 + 변동률 표)
   industry: { group: 'us', title: '산업', charts: [] },
   household: { group: 'us', title: '개인·가계', desc: '준비 중이에요.', charts: [] },
-  // 금융 계정(자금흐름): 연준 Financial Accounts(Z.1). 하위 탭 = 부문별 대차대조표
+  // 대차대조표: 연준 Financial Accounts(Z.1). 하위 탭 = 부문별 대차대조표
   flow: {
     group: 'us',
     parent: 'growth',
-    title: '금융 계정(자금흐름)',
+    title: '대차대조표',
     desc: '연준 Financial Accounts(Z.1) 기준 — fred 리포 Z.1 DB를 바로 읽어요. 분기 말 잔액, 계절조정 없음.',
-    subtabs: [['hh', '가계 및 비영리기관']],
+    subtabs: [['hh', '가계 및 비영리기관'], ['nfc', '비금융기업']],
     defaultPeriod: 's2020',
     nipa: [
       { sub: 'hh', id: 'nipa-s1mb', title: '가계·비영리단체 대차대조표', unit: '십억 달러', digits: 1, rows: Z1_S1MB, modes: true,
         src: 'https://fred.stlouisfed.org/release/tables?rid=52&eid=1256192', scale: 0.001, noScale: new Set([52, 54]), noPct: new Set([52, 54]), sep: [43], memoFrom: 43,
         note: '분기 말 잔액(FRED 백만 달러 → 십억 달러). 자산 − 부채 = 순자산. 43줄부터는 참고 항목이에요. ▸ 줄을 누르면 세부 항목이 펼쳐져요.' },
+      { sub: 'nfc', id: 'nipa-s111b', title: '비금융기업 대차대조표', unit: '십억 달러', digits: 1, rows: Z1_S111B, modes: true,
+        src: 'https://fred.stlouisfed.org/release/tables?rid=52&eid=1256247', scale: 0.001, noScale: new Set([48, 49, 50]), noPct: new Set([19, 27, 48, 49, 50]), sep: [47], memoFrom: 47,
+        note: '분기 말 잔액(FRED 백만 달러 → 십억 달러). 부채 + 자본(시가) = 부채와 자본 합계, 순자산 = 자산 − 부채. 47줄부터는 참고 항목(비율·취득원가 기준)이에요. 음수·0이 될 수 있는 줄은 증가율을 비워 둬요.' },
     ],
     charts: [
       { sub: 'hh', id: 'chart-hhbs', title: '가계 자산·부채·순자산', table: 'z1hh_quarterly', unit: '조 달러', digits: 1, defs: [
@@ -805,6 +871,12 @@ const PAGES = {
         { color: '--base-rate', label: '순자산', exact: 'TNWBSHNO', scale: 1e-6 },
         { color: '--slot-2', label: '가처분소득 대비 순자산(우, %)', exact: 'HNONWPDPI', right: true },
       ], note: '분기 말 잔액(조 달러). 가처분소득 대비 순자산은 오른쪽 축(%).' },
+      { sub: 'nfc', id: 'chart-nfcbs', title: '비금융기업 자산·부채·순자산', table: 'z1nfc_quarterly', unit: '조 달러', digits: 1, defs: [
+        { color: '--slot-1', label: '자산', exact: 'TABSNNCB', scale: 1e-6 },
+        { color: '--slot-3', label: '부채', exact: 'TLBSNNCB', scale: 1e-6 },
+        { color: '--base-rate', label: '순자산', exact: 'TNWMVBSNNCB', scale: 1e-6 },
+        { color: '--slot-2', label: '부채/순자산(우, %)', exact: 'NCBCMDPNWMV', right: true },
+      ], note: '분기 말 잔액(조 달러). 부채/순자산은 오른쪽 축(%).' },
     ],
   },
   trade: { group: 'us', title: '국제수지 및 무역', desc: '준비 중이에요.', charts: [] },
