@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261030i';
+const VERSION = '20261030j';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -1260,17 +1260,41 @@ function renderPage(page) {
 }
 
 // ===== 화면 만들기 =====
+// 사이드바 하위 메뉴 접힘 상태 (브라우저에 기억, 저장이 막혀 있으면 기본 = 펼침)
+const NAV_FOLD_KEY = 'macro-nav-folded';
+const navFolded = new Set((() => { try { return JSON.parse(localStorage.getItem(NAV_FOLD_KEY)) || []; } catch { return []; } })());
+function setNavFold(parent, folded) {
+  if (folded) navFolded.add(parent); else navFolded.delete(parent);
+  try { localStorage.setItem(NAV_FOLD_KEY, JSON.stringify([...navFolded])); } catch { /* 저장 안 돼도 화면만 바꿈 */ }
+  document.querySelectorAll(`.sidebar a[data-parent="${parent}"]`).forEach((a) => { a.hidden = folded; });
+  const fold = document.querySelector(`.nav-fold[data-fold="${parent}"]`);
+  fold.textContent = folded ? '▸' : '▾';
+  fold.title = folded ? '하위 메뉴 펼치기' : '하위 메뉴 접기';
+}
+
 function buildPages() {
   const nav = document.getElementById('nav');
   const main = document.querySelector('main');
+  const hasSub = (id) => Object.values(PAGES).some((c) => c.parent === id);
+  const link = ([id, cfg]) => (cfg.parent
+    ? `<a href="#${id}" data-page="${id}" data-parent="${cfg.parent}" class="nav-sub">${cfg.title}</a>`
+    : `<a href="#${id}" data-page="${id}"${hasSub(id) ? ' class="has-sub"' : ''}>${cfg.title}${hasSub(id) ? `<span class="nav-fold" role="button" data-fold="${id}"></span>` : ''}</a>`);
   for (const [group, label] of GROUPS) {
     const pages = Object.entries(PAGES).filter(([, cfg]) => cfg.group === group);
     nav.insertAdjacentHTML('beforeend', `
       <div class="nav-group">
         <div class="nav-group-title"><span class="code">${group.toUpperCase()}</span>${label}</div>
-        ${pages.length ? pages.map(([id, cfg]) => `<a href="#${id}" data-page="${id}"${cfg.parent ? ' class="nav-sub"' : ''}>${cfg.title}</a>`).join('') : '<p class="nav-empty">준비 중</p>'}
+        ${pages.length ? pages.map(link).join('') : '<p class="nav-empty">준비 중</p>'}
       </div>`);
   }
+  nav.querySelectorAll('.nav-fold').forEach((f) => {
+    setNavFold(f.dataset.fold, navFolded.has(f.dataset.fold));
+    f.onclick = (e) => { // 화살표만 누르면 페이지 이동 없이 접기·펼치기
+      e.preventDefault();
+      e.stopPropagation();
+      setNavFold(f.dataset.fold, !navFolded.has(f.dataset.fold));
+    };
+  });
 
   // src: 원표 링크 (FRED 발표표 등)
   const src = (c) => (c.src ? `<p class="note src"><a href="${c.src}" target="_blank" rel="noopener">FRED 원표 보기 ↗</a></p>` : '');
@@ -1333,6 +1357,7 @@ function showPage(hash) {
     document.querySelectorAll(`[data-subpage^="${page}/"]`).forEach((s) => s.classList.toggle('active', s.dataset.subpage === `${page}/${state.sub[page]}`));
   }
   document.querySelectorAll('.page').forEach((s) => s.classList.toggle('active', s.id === `page-${page}`));
+  if (PAGES[page].parent && navFolded.has(PAGES[page].parent)) setNavFold(PAGES[page].parent, false); // 하위 페이지로 오면 펼침
   document.querySelectorAll('.sidebar a').forEach((a) => a.classList.toggle('active', a.dataset.page === page));
   loadPage(page);
 }

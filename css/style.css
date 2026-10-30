@@ -55,6 +55,10 @@ body {
 /* 하위 페이지 (예: 성장 > GDP) */
 .sidebar nav a.nav-sub { padding: 7px 12px 7px 28px; font-size: 14px; color: var(--text-secondary); }
 .sidebar nav a.nav-sub.active { color: var(--accent); }
+.sidebar nav a[hidden] { display: none; }
+.sidebar nav a.has-sub { display: flex; align-items: center; justify-content: space-between; }
+.nav-fold { padding: 0 6px; border-radius: 4px; font-size: 11px; color: var(--text-muted); cursor: pointer; }
+.nav-fold:hover { background: var(--border); color: var(--text-primary); }
 /* 사이드바 묶음 (유가 / 미국 / 한국) */
 .nav-group { padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
 .nav-group:last-child { border-bottom: 0; }
