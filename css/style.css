@@ -176,3 +176,10 @@ p.note { margin: 0 0 4px; min-height: 1em; color: var(--text-muted); font-size: 
   .chart-grid, .chart-grid.cols-3 { grid-template-columns: 1fr; }
   .filters-spacer { display: none; }
 }
+/* 발표표 접기: 하위 항목이 있는 줄을 클릭하면 접고 편다 */
+.nipa-table tbody tr.parent { cursor: pointer; }
+.nipa-table .fold { display: inline-block; width: 14px; color: var(--text-muted); font-size: 11px; }
+.nipa-table tr[hidden] { display: none; }
+/* 원표 링크 */
+p.note.src a { color: var(--accent); text-decoration: none; }
+p.note.src a:hover { text-decoration: underline; }

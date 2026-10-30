@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261030b';
+const VERSION = '20261030c';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -132,19 +132,29 @@ const TABLE2 = [
 ];
 const SLOTS = 7; // css --slot-1 ~ --slot-7
 
-// BEA 국민계정(NIPA) 발표표. FRED release 53(GDP) 표 구조 그대로: [줄 번호, FRED 티커, DB, 항목명, 단계(0~3)]
-// 같은 26줄 구조라 항목명·단계는 공유하고 티커만 표마다 다르다.
+// BEA 국민계정(NIPA) 발표표. FRED release 53(GDP) 표 구조 그대로: [줄 번호, FRED 티커, DB, 항목명, 단계(0~4), 영문 이름]
+// 같은 26줄 구조라 항목명·단계·영문 이름은 공유하고 티커만 표마다 다르다.
 const NIPA_LINES = [
-  ['국내총생산 (GDP)', 0, 'gdp'], ['개인소비지출', 1, 'pio'], ['상품', 2, 'pio'], ['내구재', 3, 'pio'], ['비내구재', 3, 'pio'], ['서비스', 2, 'pio'],
-  ['민간총투자', 1, 'dca'], ['고정투자', 2, 'dca'], ['비주거', 3, 'dca'], ['구조물', 4, 'dca'], ['장비', 4, 'dca'], ['지식재산', 4, 'dca'], ['주거', 3, 'dca'],
-  ['재고 변동', 2, 'dca'], ['순수출', 1, 'exp'], ['수출', 2, 'exp'], ['상품', 3, 'exp'], ['서비스', 3, 'exp'], ['수입', 2, 'imp'], ['상품', 3, 'imp'], ['서비스', 3, 'imp'],
-  ['정부 소비·투자', 1, 'gov'], ['연방', 2, 'gov'], ['국방', 3, 'gov'], ['비국방', 3, 'gov'], ['주·지방', 2, 'gov'],
+  ['국내총생산 (GDP)', 0, 'gdp', 'Gross domestic product'],
+  ['개인소비지출', 1, 'pio', 'Personal consumption expenditures'],
+  ['상품', 2, 'pio', 'Goods'], ['내구재', 3, 'pio', 'Durable goods'], ['비내구재', 3, 'pio', 'Nondurable goods'], ['서비스', 2, 'pio', 'Services'],
+  ['민간총투자', 1, 'dca', 'Gross private domestic investment'], ['고정투자', 2, 'dca', 'Fixed investment'], ['비주거', 3, 'dca', 'Nonresidential'],
+  ['구조물', 4, 'dca', 'Structures'], ['장비', 4, 'dca', 'Equipment'], ['지식재산', 4, 'dca', 'Intellectual property products'], ['주거', 3, 'dca', 'Residential'],
+  ['재고 변동', 2, 'dca', 'Change in private inventories'],
+  ['순수출', 1, 'exp', 'Net exports of goods and services'],
+  ['수출', 2, 'exp', 'Exports'], ['상품', 3, 'exp', 'Goods'], ['서비스', 3, 'exp', 'Services'],
+  ['수입', 2, 'imp', 'Imports'], ['상품', 3, 'imp', 'Goods'], ['서비스', 3, 'imp', 'Services'],
+  ['정부 소비·투자', 1, 'gov', 'Government consumption expenditures and gross investment'],
+  ['연방', 2, 'gov', 'Federal'], ['국방', 3, 'gov', 'National defense'], ['비국방', 3, 'gov', 'Nondefense'], ['주·지방', 2, 'gov', 'State and local'],
 ];
 // 표마다 DB가 다른 줄: { 줄 번호: DB 약어 }
 const nipaRows = (tickers, dbOverride = {}) => tickers.map((t, i) => {
-  const [name, level, db] = NIPA_LINES[i];
-  return [i + 1, t, `${dbOverride[i + 1] || db}_quarterly`, name, level];
+  const [name, level, db, en] = NIPA_LINES[i];
+  return [i + 1, t, `${dbOverride[i + 1] || db}_quarterly`, name, level, en];
 });
+// 수준이 음수가 될 수 있어 증가율(%)이 의미 없는 줄 (재고 변동, 순수출)
+const NIPA_NO_PCT = new Set([14, 15]);
+const FRED_TABLE = (eid) => `https://fred.stlouisfed.org/release/tables?rid=53&eid=${eid}`;
 const NIPA_112 = nipaRows([
   'A191RL1Q225SBEA', 'DPCERY2Q224SBEA', 'DGDSRY2Q224SBEA', 'DDURRY2Q224SBEA', 'DNDGRY2Q224SBEA', 'DSERRY2Q224SBEA',
   'A006RY2Q224SBEA', 'A007RY2Q224SBEA', 'A008RY2Q224SBEA', 'A009RY2Q224SBEA', 'Y033RY2Q224SBEA', 'Y001RY2Q224SBEA', 'A011RY2Q224SBEA',
@@ -247,15 +257,16 @@ const PAGES = {
     desc: '주요국: 인포맥스 분기 데이터 기준 실질 GDP 성장률(전년동기비, %). GDP: BEA 국민계정 발표표(FRED release 53) — fred 리포 NIPA 항목 DB를 바로 읽어요.',
     subtabs: [['main', '주요국'], ['us-gdp', 'GDP']],
     defaultPeriod: 's2020',
-    // nipa: 발표표 블록 (rows = [줄, 티커, DB, 항목명, 단계]). 열은 기간 안의 분기, 최신이 왼쪽
+    // nipa: 발표표 블록 (rows = [줄, 티커, DB, 항목명, 단계, 영문]). 열은 기간 안의 분기, 최신이 오른쪽
+    // src: FRED 원표 링크, modes: 기준 버튼(YoY/QoQ/원래 값) 표시
     nipa: [
-      { sub: 'us-gdp', id: 'nipa-112', title: 'Table 1.1.2. 실질 GDP 성장률 기여도', unit: '%p', digits: 2, rows: NIPA_112,
+      { sub: 'us-gdp', id: 'nipa-112', title: '실질 GDP 성장률 기여도', unit: '%p', digits: 2, rows: NIPA_112, src: FRED_TABLE(12914),
         note: '전기 대비 연율(%). 1줄은 실질 GDP 성장률, 나머지는 성장률에 대한 기여도(%p)라 하위 항목을 더하면 위 항목이 돼요.' },
-      { sub: 'us-gdp', id: 'nipa-115', title: 'Table 1.1.5. 명목 GDP', unit: '십억 달러', digits: 1, rows: NIPA_115,
-        note: '계절조정 연율, 십억 달러. 소비 + 투자 + 순수출 + 정부 = GDP. 순수출 = 수출 − 수입.' },
+      { sub: 'us-gdp', id: 'nipa-115', title: '명목 GDP', unit: '십억 달러', digits: 1, rows: NIPA_115, src: FRED_TABLE(12998), modes: true,
+        note: '계절조정 연율. 원래 값 기준 소비 + 투자 + 순수출 + 정부 = GDP, 순수출 = 수출 − 수입. 재고 변동·순수출은 음수가 될 수 있어 증가율은 비워 둬요.' },
     ],
     charts: [
-      { sub: 'us-gdp', id: 'chart-gdp-contrib', title: '실질 GDP 성장률 기여도 (Table 1.1.2)', table: 'gdp_quarterly', unit: '%', digits: 2, bar: true, stack: true, wide: true, defs: [
+      { sub: 'us-gdp', id: 'chart-gdp-contrib', title: '실질 GDP 성장률 기여도 추이', src: FRED_TABLE(12914), table: 'gdp_quarterly', unit: '%', digits: 2, bar: true, stack: true, wide: true, defs: [
         { color: '--slot-1', label: '개인소비', exact: 'DPCERY2Q224SBEA', table: 'pio_quarterly' },
         { color: '--slot-2', label: '민간투자', exact: 'A006RY2Q224SBEA', table: 'dca_quarterly' },
         { color: '--slot-3', label: '순수출', exact: 'A019RY2Q224SBEA', table: 'exp_quarterly' },
@@ -622,7 +633,8 @@ const PAGES = {
 
 // ===== 상태 =====
 // panel: 패널 id → { mode: 'mom'|'yoy', slots: Map(티커 → 색 번호) }
-const state = { data: {}, page: 'rates', sub: { rates: 'main', growth: 'main', business: 'manufacturing', credit: 'leverage' }, period: {}, tenor: 10, legend: {}, ready: {}, panel: {} };
+// nipa: 발표표 id → { mode: 'yoy'|'qoqa'|'raw', collapsed: Set(접은 줄 번호) }
+const state = { data: {}, page: 'rates', sub: { rates: 'main', growth: 'main', business: 'manufacturing', credit: 'leverage' }, period: {}, tenor: 10, legend: {}, ready: {}, panel: {}, nipa: {} };
 const charts = {};
 
 // ===== 유틸 =====
@@ -729,6 +741,9 @@ function valuesOf(table, def) {
   }
   if (def.transform === 'mom') {
     vals = vals.map((v, i) => (i > 0 && v !== null && vals[i - 1] ? (v / vals[i - 1] - 1) * 100 : null));
+  }
+  if (def.transform === 'qoqa') { // 전기비 연율 (BEA 방식)
+    vals = vals.map((v, i) => (i > 0 && v !== null && vals[i - 1] ? ((v / vals[i - 1]) ** 4 - 1) * 100 : null));
   }
   if (def.transform === 'yoy') {
     const at = new Map(dates.map((t, i) => [t, vals[i]]));
@@ -997,23 +1012,57 @@ function drawPanel(panel, page) {
   document.getElementById(`note-${panel.id}`).textContent = notes.join(' · ');
 }
 
-// ===== 발표표 (BEA NIPA 등): 행 = 표의 줄(위계), 열 = 기간 안의 분기 (최신이 왼쪽, FRED 표와 같은 순서) =====
+// ===== 발표표 (BEA NIPA 등): 행 = 표의 줄(위계), 열 = 기간 안의 분기 (옛날 → 최신) =====
+// 하위 항목이 있는 줄은 ▾/▸ 로 접고 편다. modes 표는 YoY/QoQ(연율)/원래 값 기준을 고른다.
+const NIPA_MODES = [{ key: 'yoy', label: 'YoY (전년동기비)' }, { key: 'qoqa', label: 'QoQ (전기비 연율)' }, { key: 'raw', label: '원래 값' }];
+function nipaState(spec) {
+  if (!state.nipa[spec.id]) state.nipa[spec.id] = { mode: spec.modes ? 'yoy' : 'raw', collapsed: new Set() };
+  return state.nipa[spec.id];
+}
+
 function drawNipa(spec, page) {
   const period = state.period[page];
+  const { mode, collapsed } = nipaState(spec);
+  const pct = mode !== 'raw';
   const rows = spec.rows.map((row) => {
-    const v = valuesOf(state.data[row[2]], { exact: row[1] });
+    const v = pct && NIPA_NO_PCT.has(row[0]) ? null : valuesOf(state.data[row[2]], { exact: row[1], transform: pct ? mode : undefined });
     return { row, at: new Map(v ? pointsInPeriod(v, period) : []) };
   });
+  // 위계: 각 줄의 상위 줄 목록, 하위 항목 유무
+  const parents = [];
+  const stack = [];
+  rows.forEach(({ row: [line, , , , level] }) => {
+    while (stack.length && stack[stack.length - 1].level >= level) stack.pop();
+    parents.push(stack.map((x) => x.line));
+    stack.push({ line, level });
+  });
+  const hasKids = (i) => rows[i + 1] && rows[i + 1].row[4] > rows[i].row[4];
   const quarters = [...new Set(rows.flatMap((r) => [...r.at.keys()]))].sort((a, b) => a - b);
-  const fmt = (v) => v.toLocaleString('ko-KR', { minimumFractionDigits: spec.digits, maximumFractionDigits: spec.digits });
+  const digits = pct ? 1 : spec.digits;
+  const fmt = (v) => v.toLocaleString('ko-KR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
   const cell = (v) => (v === undefined ? '<td></td>' : `<td class="${v < 0 ? 'down' : ''}">${fmt(v)}</td>`);
-  document.getElementById(`table-${spec.id}`).innerHTML = `
-    <thead><tr><th class="line">줄</th><th class="name">항목 (${spec.unit})</th>${quarters.map((t) => `<th>${quarterLabel(t)}</th>`).join('')}</tr></thead>
-    <tbody>${rows.map(({ row: [line, t, , name, level], at }) => `<tr class="lv${level}"><td class="line">${line}</td><th class="name" title="${t}">${name}</th>${quarters.map((q) => cell(at.get(q))).join('')}</tr>`).join('')}</tbody>`;
-  // 최신 분기가 오른쪽: 처음엔 맨 오른쪽(최신)이 보이게 스크롤
-  const wrap = document.getElementById(`table-${spec.id}`).parentElement;
-  wrap.scrollLeft = wrap.scrollWidth;
-  const missing = rows.filter((r) => !r.at.size).map((r) => r.row[1]);
+  const unit = pct ? '%' : spec.unit;
+  const el = document.getElementById(`table-${spec.id}`);
+  el.innerHTML = `
+    <thead><tr><th class="line">줄</th><th class="name">항목 (${unit})</th>${quarters.map((t) => `<th>${quarterLabel(t)}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(({ row: [line, t, , name, level, en], at }, i) => {
+      const hidden = parents[i].some((l) => collapsed.has(l));
+      const toggle = hasKids(i) ? `<span class="fold">${collapsed.has(line) ? '▸' : '▾'}</span>` : '<span class="fold"></span>';
+      return `<tr class="lv${level}${hasKids(i) ? ' parent' : ''}" data-line="${line}"${hidden ? ' hidden' : ''}><td class="line">${line}</td><th class="name" title="${en} (${t})">${toggle}${name}</th>${quarters.map((q) => cell(at.get(q))).join('')}</tr>`;
+    }).join('')}</tbody>`;
+  el.querySelectorAll('tbody tr.parent').forEach((tr) => {
+    tr.onclick = () => {
+      const line = Number(tr.dataset.line);
+      if (collapsed.has(line)) collapsed.delete(line); else collapsed.add(line);
+      drawNipa(spec, page);
+    };
+  });
+  const wrap = el.parentElement;
+  if (wrap.dataset.view !== `${period.key}/${mode}`) { // 기간·기준이 바뀌었을 때만 최신 분기(오른쪽 끝)로 스크롤
+    wrap.scrollLeft = wrap.scrollWidth;
+    wrap.dataset.view = `${period.key}/${mode}`;
+  }
+  const missing = rows.filter((r) => !r.at.size && !(pct && NIPA_NO_PCT.has(r.row[0]))).map((r) => r.row[1]);
   document.getElementById(`note-${spec.id}`).textContent = [spec.note, missing.length ? `${periodName(period)} 값 없음: ${missing.join(', ')}` : ''].filter(Boolean).join(' · ');
 }
 
@@ -1038,6 +1087,8 @@ function buildPages() {
       </div>`);
   }
 
+  // src: 원표 링크 (FRED 발표표 등)
+  const src = (c) => (c.src ? `<p class="note src"><a href="${c.src}" target="_blank" rel="noopener">FRED 원표 보기 ↗</a></p>` : '');
   for (const [id, cfg] of Object.entries(PAGES)) {
     // 만기 버튼이 있는 차트 옆 칸에는 같은 높이의 빈 줄을 넣어 차트 위치를 맞춘다.
     const cell = (c, list) => `
@@ -1046,6 +1097,7 @@ function buildPages() {
         ${c.tenors ? '<div class="filters"><span class="label">만기</span><div class="seg" id="tenors"></div></div>'
           : list.some((x) => x.tenors) ? '<div class="filters filters-spacer"></div>' : ''}
         <p class="note" id="note-${c.id}"></p>
+        ${src(c)}
         <div class="chart" id="${c.id}"></div>
       </div>`;
     const heading = (c) => (c.heading ? `<div class="grid-heading"><h3>${c.heading}</h3></div>` : '');
@@ -1062,7 +1114,9 @@ function buildPages() {
     const nipa = (s) => (cfg.nipa || []).filter((n) => !s || n.sub === s).map((n) => `
       <div class="panel">
         <h2>${n.title}</h2>
+        ${n.modes ? `<div class="filters"><span class="label">기준</span><div class="seg" data-nipa-mode="${n.id}"></div></div>` : ''}
         <p class="note" id="note-${n.id}"></p>
+        ${src(n)}
         <div class="table-wrap"><table class="ind-table nipa-table" id="table-${n.id}"></table></div>
       </div>`).join('');
     const body = cfg.subtabs
@@ -1238,6 +1292,9 @@ function setupFilters(page) {
   (PAGES[page].panels || []).forEach((p) => {
     const modes = [{ key: 'mom', label: 'MoM (전월비)' }, { key: 'yoy', label: 'YoY (전년비)' }];
     buttons(document.querySelector(`[data-mode="${p.id}"]`), [modes], panelState(p).mode, (m) => { panelState(p).mode = m.key; drawPanel(p, page); });
+  });
+  (PAGES[page].nipa || []).filter((n) => n.modes).forEach((n) => {
+    buttons(document.querySelector(`[data-nipa-mode="${n.id}"]`), [NIPA_MODES], nipaState(n).mode, (m) => { nipaState(n).mode = m.key; drawNipa(n, page); });
   });
   if (PAGES[page].charts.some((c) => c.tenors)) {
     const tenors = TENORS.map((t) => ({ key: t, label: `${t}Y` }));
