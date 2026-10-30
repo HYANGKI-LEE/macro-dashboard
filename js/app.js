@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261030j';
+const VERSION = '20261030k';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -36,6 +36,7 @@ const LONG_DB = {
   imp_quarterly: { url: `${FRED_REPO_DB}us_macro_NIPA_Foreign_Transactions_Imports.db.gz`, obs: 'obs_quarterly' },
   gov_quarterly: { url: `${FRED_REPO_DB}us_macro_NIPA_Govt_Receipts_Expenditures.db.gz`, obs: 'obs_quarterly' },
   gdi_quarterly: { url: `${FRED_REPO_DB}us_macro_NIPA_GDI.db.gz`, obs: 'obs_quarterly' },
+  z1hh_quarterly: { url: `${FRED_REPO_DB}us_macro_Z1_Households_BS.db.gz`, obs: 'obs_quarterly' },
 };
 const freqOf = (table) => table.split('_')[1];
 
@@ -291,6 +292,63 @@ const NIPA_110 = [
   ['A264RC1Q027SBEA', '정부', 2, 'Government'],
   ['A030RC1Q027SBEA', '통계적 불일치', 1, 'Statistical discrepancy'],
 ].map(([t, name, level, en], i) => [i + 1, t, 'gdi_quarterly', name, level, en]);
+// Z.1 S1M.b 가계·비영리단체 대차대조표 (연준 Financial Accounts). 43줄부터 참고 항목. [티커, 항목명, 단계, 영문, 처음에 접힘]
+const Z1_S1MB = [
+  ['TABSHNO', '자산', 0, 'Households and nonprofit organizations; total assets'],
+  ['BOGZ1LM152010005Q', '비금융자산', 1, 'Households and nonprofit organizations; nonfinancial assets'],
+  ['HNOREMV', '부동산', 2, 'Households and nonprofit organizations; real estate at market value'],
+  ['HOOREVLMHMV', '가계 (자가 주택 등)', 3, 'Households; owner-occupied real estate including vacant land and mobile homes at market value', 1],
+  ['NOREMV', '비영리단체', 3, 'Nonprofit organizations; real estate at market value', 1],
+  ['BOGZ1LM165015205Q', '장비 (비영리)', 2, 'Nonprofit organizations; equipment, current cost basis'],
+  ['BOGZ1LM165013765Q', '지식재산 (비영리)', 2, 'Nonprofit organizations; nonresidential intellectual property products, current cost basis'],
+  ['BOGZ1LM155111005Q', '내구소비재', 2, 'Households and nonprofit organizations; consumer durable goods, current cost basis'],
+  ['TFAABSHNO', '금융자산', 1, 'Households and nonprofit organizations; total financial assets'],
+  ['CDCABSHNO', '요구불예금·현금', 2, 'Households and nonprofit organizations; checkable deposits and currency; asset'],
+  ['TSDABSHNO', '정기·저축성 예금', 2, 'Households and nonprofit organizations; total time and savings deposits; asset'],
+  ['BOGZ1LM153030505Q', '기타 예금', 2, 'Households and nonprofit organizations; other deposits; asset'],
+  ['BOGZ1LM154022005Q', '채권', 2, 'Households and nonprofit organizations; debt securities; asset'],
+  ['BOGZ1LM153061105Q', '국채', 3, 'Households and nonprofit organizations; Treasury securities; asset', 1],
+  ['BOGZ1LM153061705Q', '정부기관·GSE 채권', 3, 'Households and nonprofit organizations; agency- and GSE-backed securities; asset', 1],
+  ['BOGZ1LM153062005Q', '지방채', 3, 'Households and nonprofit organizations; municipal securities; asset', 1],
+  ['BOGZ1LM153063005Q', '회사채·외국채', 3, 'Households and nonprofit organizations; corporate and foreign bonds; asset', 1],
+  ['HNOLA', '대출채권', 2, 'Households and nonprofit organizations; loans; asset'],
+  ['NOCCSLA', '학자금 대출 (비영리)', 3, 'Nonprofit organizations; consumer credit, student loans; asset', 1],
+  ['MABSHNO', '모기지', 3, 'Households and nonprofit organizations; total mortgages; asset', 1],
+  ['BOGZ1FL153069005Q', '기타 대출', 3, 'Households and nonprofit organizations; other loans and advances; asset', 1],
+  ['HNOCEA', '주식', 2, 'Households and nonprofit organizations; corporate equities; asset'],
+  ['BOGZ1LM153081115Q', '기타 지분 (비상장 사업체 등)', 2, 'Households and nonprofit organizations; other equity; asset (IMA)'],
+  ['MMFSABSHNO', 'MMF', 2, 'Households and nonprofit organizations; money market fund shares; asset'],
+  ['HNOMFSA', '뮤추얼펀드', 2, 'Households and nonprofit organizations; mutual fund shares; asset'],
+  ['BOGZ1LM153064705Q', '헤지펀드', 2, 'Households and nonprofit organizations; hedge fund shares; asset'],
+  ['BOGZ1LM153064505Q', '사모대출펀드', 2, 'Households and nonprofit organizations; private debt fund shares; asset'],
+  ['LIRABSHNO', '생명보험 준비금', 2, 'Households and nonprofit organizations; life insurance reserves; asset'],
+  ['HNOPFAQ027S', '연금 수급권', 2, 'Households and nonprofit organizations; pension entitlements; asset'],
+  ['BOGZ1FL163070005Q', '매출채권 (비영리)', 2, 'Nonprofit organizations; grants and trade receivables; asset'],
+  ['MAABSHNO', '기타 자산', 2, 'Households and nonprofit organizations; total miscellaneous assets'],
+  ['TLBSHNO', '부채', 0, 'Households and nonprofit organizations; total liabilities'],
+  ['MSLBSHNO', '지방채 (비영리)', 1, 'Nonprofit organizations; municipal securities; liability'],
+  ['HNOLL', '대출', 1, 'Households and nonprofit organizations; loans; liability'],
+  ['BLNECLBSHNO', '예금기관 기타 대출', 2, 'Households and nonprofit organizations; depository institution loans n.e.c.; liability'],
+  ['CCLBSHNO', '소비자신용', 2, 'Households and nonprofit organizations; consumer credit; liability'],
+  ['HMLBSHNO', '주택담보대출 (1~4가구)', 2, 'Households and nonprofit organizations; one-to-four-family residential mortgages; liability'],
+  ['CMLBSHNO', '상업용 모기지 (비영리)', 2, 'Nonprofit organizations; commercial mortgages; liability'],
+  ['OLALBSHNO', '기타 대출', 2, 'Households and nonprofit organizations; other loans and advances; liability'],
+  ['BOGZ1FL163170005Q', '매입채무 (비영리)', 1, 'Nonprofit organizations; trade payables; liability'],
+  ['DULIPLBSHNO', '미납 생명보험료', 1, 'Life insurance companies, general accounts; deferred and unpaid life insurance premiums; asset'],
+  ['TNWBSHNO', '순자산', 0, 'Households and nonprofit organizations; net worth'],
+  ['ASIRAL', 'IRA 잔액', 0, 'All sectors; IRAs; liability'],
+  ['HNOA529P', '529 플랜 자산', 0, 'Households and nonprofit organizations; assets in 529 plans'],
+  ['HNOA529SP', '저축형', 1, 'Households and nonprofit organizations; assets in 529 savings plans', 1],
+  ['HNOA529PPP', '선납형', 1, 'Households and nonprofit organizations; assets in 529 pre-paid plans', 1],
+  ['BOGZ1LM155012605Q', '주거용 구조물 (현재원가)', 0, 'Households and nonprofit organizations; residential structures, current cost basis'],
+  ['BOGZ1LM155012665Q', '가계', 1, 'Households; residential structures, current cost basis', 1],
+  ['BOGZ1LM165012665Q', '비영리단체', 1, 'Nonprofit organizations; residential structures, current cost basis', 1],
+  ['BOGZ1LM165013665Q', '비주거용 구조물 (비영리)', 0, 'Nonprofit organizations; nonresidential structures, current cost basis'],
+  ['HNODPI', '가처분소득', 0, 'Households and nonprofit organizations; disposable personal income'],
+  ['HNONWPDPI', '가처분소득 대비 순자산 (%)', 0, 'Households and nonprofit organizations; net worth as a percentage of disposable personal income'],
+  ['OEHRENWBSHNO', '주택 순자산 (자가 보유분)', 0, 'Households; owners\' equity in real estate'],
+  ['HOEREPHRE', '주택가치 대비 순자산 (%)', 0, 'Households; owners\' equity in real estate as a percentage of household real estate'],
+].map(([t, name, level, en, isNew], i) => [i + 1, t, 'z1hh_quarterly', name, level, en, !!isNew]);
 const FRED_TABLE = (eid) => `https://fred.stlouisfed.org/release/tables?rid=53&eid=${eid}`;
 
 // ===== 사이드바 묶음 · 페이지 · 차트 정의 =====
@@ -298,6 +356,9 @@ const FRED_TABLE = (eid) => `https://fred.stlouisfed.org/release/tables?rid=53&e
 // wide: 그리드 한 줄 전체 폭으로 그림 (추이가 촘촘한 막대 차트 등).
 // heading: 이 차트 앞에 소제목 줄을 넣고 새 줄부터 시작 (예: '연체잔액비중 : 상품별').
 const GROUPS = [['oil', '유가'], ['us', '미국'], ['kr', '한국']];
+// 사이드바 순서 (Bloomberg ECST 분류 기준). 하위 페이지(parent)는 상위 바로 뒤에. 여기 없는 페이지는 그 뒤에 정의 순서대로
+const NAV_ORDER = ['growth', 'gdp', 'inflation', 'labor', 'industry', 'business', 'household', 'hhbs', 'housing',
+  'trade', 'fiscal', 'money', 'finance', 'credit', 'rates'];
 
 const PAGES = {
   oil: {
@@ -360,7 +421,7 @@ const PAGES = {
   },
   housing: {
     group: 'us',
-    title: '주택시장',
+    title: '주택 및 부동산',
     desc: 'FRED 기준(기존주택판매는 인포맥스). 계절조정 연율(SAAR).',
     charts: [
       { id: 'chart-starts', title: '미국 주택착공 · 허가건수', table: FRED_M, unit: '천 호', digits: 0, defs: [
@@ -378,7 +439,7 @@ const PAGES = {
   },
   growth: {
     group: 'us',
-    title: '성장',
+    title: '국민계정(GDP)',
     desc: '인포맥스 분기 데이터 기준 실질 GDP 성장률(전년동기비, %).',
     defaultPeriod: 's2020',
     charts: [
@@ -465,6 +526,7 @@ const PAGES = {
   // 01. US 매크로 엑셀 Main(분기)의 신용 관련 차트. 모두 FRED 분기 데이터, 기준금리는 오른쪽 축.
   credit: {
     group: 'us',
+    parent: 'finance',
     title: '신용',
     desc: 'FRED 분기 데이터 기준 (엑셀 Main(분기) 신용 차트). 기준금리는 실효 연방기금금리 분기 평균(오른쪽 축). '
       + 'HY 스프레드·수익률과 주요 상업은행(Citi·JPM 등) 카드 데이터는 아직 DB에 없어 뺐어요. GDP·투자 차트는 제외. '
@@ -731,11 +793,37 @@ const PAGES = {
   },
   // 기업/생산: 제조업 = Census M3 내구재 주문 (FRED 월별, 계절조정)
   // panels: 차트 그리드 아래 전체 폭 블록 (MoM/YoY 버튼 + 선택 업종 추이 차트 + 변동률 표)
+  industry: { group: 'us', title: '산업', charts: [] },
+  household: { group: 'us', title: '개인·가계', charts: [] },
+  hhbs: {
+    group: 'us',
+    parent: 'household',
+    title: '가계 대차대조표',
+    desc: '연준 Financial Accounts(Z.1) 표 S1M.b 기준 — fred 리포 Z.1 가계 DB를 바로 읽어요. 분기 말 잔액, 계절조정 없음.',
+    defaultPeriod: 's2020',
+    nipa: [
+      { id: 'nipa-s1mb', title: '가계·비영리단체 대차대조표', unit: '십억 달러', digits: 1, rows: Z1_S1MB, modes: true,
+        src: 'https://fred.stlouisfed.org/release/tables?rid=52&eid=1256192', scale: 0.001, noScale: new Set([52, 54]), noPct: new Set([52, 54]), sep: [43], memoFrom: 43,
+        note: '분기 말 잔액(FRED 백만 달러 → 십억 달러). 자산 − 부채 = 순자산. 43줄부터는 참고 항목이에요. ▸ 줄을 누르면 세부 항목이 펼쳐져요.' },
+    ],
+    charts: [
+      { id: 'chart-hhbs', title: '가계 자산·부채·순자산', table: 'z1hh_quarterly', unit: '조 달러', digits: 1, defs: [
+        { color: '--slot-1', label: '자산', exact: 'TABSHNO', scale: 1e-6 },
+        { color: '--slot-3', label: '부채', exact: 'TLBSHNO', scale: 1e-6 },
+        { color: '--base-rate', label: '순자산', exact: 'TNWBSHNO', scale: 1e-6 },
+        { color: '--slot-2', label: '가처분소득 대비 순자산(우, %)', exact: 'HNONWPDPI', right: true },
+      ], note: '분기 말 잔액(조 달러). 가처분소득 대비 순자산은 오른쪽 축(%).' },
+    ],
+  },
+  trade: { group: 'us', title: '국제수지 및 무역', desc: '준비 중이에요.', charts: [] },
+  fiscal: { group: 'us', title: '정부재정과 부채', desc: '준비 중이에요.', charts: [] },
+  money: { group: 'us', title: '통화', desc: '준비 중이에요.', charts: [] },
+  finance: { group: 'us', title: '금융지표', charts: [] },
   business: {
     group: 'us',
-    title: '기업/생산',
+    parent: 'industry',
+    title: '제조업 수주',
     desc: 'FRED 월별 데이터 기준. 제조업: Census M3(제조업 출하·재고·수주) — fred 리포(HYANGKI-LEE/fred)의 Manufacturing 항목 DB를 바로 읽고, 수주·출하·재고 모두 계절조정 금액(백만 달러)에서 계산.',
-    subtabs: [['manufacturing', '제조업']],
     cols: 3,
     defaultPeriod: 's2020',
     charts: [
@@ -809,7 +897,7 @@ const PAGES = {
 // ===== 상태 =====
 // panel: 패널 id → { mode: 'mom'|'yoy', slots: Map(티커 → 색 번호) }
 // nipa: 발표표 id → { mode: 'yoy'|'qoqa'|'raw', collapsed: Set(접은 줄 번호) }
-const state = { data: {}, page: 'rates', sub: { rates: 'main', gdp: 'chg', business: 'manufacturing', credit: 'leverage' }, period: {}, tenor: 10, legend: {}, ready: {}, panel: {}, nipa: {} };
+const state = { data: {}, page: 'rates', sub: { rates: 'main', gdp: 'chg', credit: 'leverage' }, period: {}, tenor: 10, legend: {}, ready: {}, panel: {}, nipa: {} };
 const charts = {};
 
 // ===== 유틸 =====
@@ -1209,7 +1297,7 @@ function drawNipa(spec, page) {
   const pct = mode !== 'raw';
   const noPct = spec.noPct || new Set();
   const rows = spec.rows.map((row) => {
-    const v = !row[1] || (pct && noPct.has(row[0])) ? null : valuesOf(state.data[row[2]], { exact: row[1], transform: pct ? mode : undefined });
+    const v = !row[1] || (pct && noPct.has(row[0])) ? null : valuesOf(state.data[row[2]], { exact: row[1], transform: pct ? mode : undefined, scale: !pct && !spec.noScale?.has(row[0]) ? spec.scale : undefined });
     return { row, at: new Map(v ? pointsInPeriod(v, period) : []) };
   });
   // 위계: 각 줄의 상위 줄 목록, 하위 항목 유무
@@ -1232,7 +1320,9 @@ function drawNipa(spec, page) {
     <tbody>${rows.map(({ row: [line, t, , name, level, en], at }, i) => {
       const hidden = parents[i].some((l) => collapsed.has(l));
       const toggle = hasKids(i) ? `<span class="fold">${collapsed.has(line) ? '▸' : '▾'}</span>` : '<span class="fold"></span>';
-      const cls = [spec.highlight?.includes(line) ? 'lv0' : `lv${level}`, hasKids(i) && 'parent', spec.sep?.includes(line) && 'sep'].filter(Boolean).join(' ');
+      // memoFrom: 그 줄부터는 참고 항목이라 한 단계 들여 보여줌 (위계는 그대로)
+      const shown = spec.highlight?.includes(line) ? 0 : line >= (spec.memoFrom ?? Infinity) ? level + 1 : level;
+      const cls = [`lv${shown}`, hasKids(i) && 'parent', spec.sep?.includes(line) && 'sep'].filter(Boolean).join(' ');
       return `<tr class="${cls}" data-line="${line}"${hidden ? ' hidden' : ''}><td class="line">${line}</td><th class="name" title="${en}${t ? ` (${t})` : ''}">${toggle}${name}</th>${quarters.map((q) => cell(at.get(q))).join('')}</tr>`;
     }).join('')}</tbody>`;
   el.querySelectorAll('tbody tr.parent').forEach((tr) => {
@@ -1280,7 +1370,8 @@ function buildPages() {
     ? `<a href="#${id}" data-page="${id}" data-parent="${cfg.parent}" class="nav-sub">${cfg.title}</a>`
     : `<a href="#${id}" data-page="${id}"${hasSub(id) ? ' class="has-sub"' : ''}>${cfg.title}${hasSub(id) ? `<span class="nav-fold" role="button" data-fold="${id}"></span>` : ''}</a>`);
   for (const [group, label] of GROUPS) {
-    const pages = Object.entries(PAGES).filter(([, cfg]) => cfg.group === group);
+    const rank = (id) => (NAV_ORDER.includes(id) ? NAV_ORDER.indexOf(id) : NAV_ORDER.length);
+    const pages = Object.entries(PAGES).filter(([, cfg]) => cfg.group === group).sort(([a], [b]) => rank(a) - rank(b));
     nav.insertAdjacentHTML('beforeend', `
       <div class="nav-group">
         <div class="nav-group-title"><span class="code">${group.toUpperCase()}</span>${label}</div>
@@ -1338,7 +1429,7 @@ function buildPages() {
         <p class="updated" id="updated-${id}"></p>
         <h1><span class="crumb">${groupLabel}</span>${cfg.title}</h1>
         ${cfg.subtabs ? `<nav class="subtabs" data-subtabs="${id}">${cfg.subtabs.map(([s, label]) => `<a href="#${id}/${s}" data-sub="${s}">${label}</a>`).join('')}</nav>` : ''}
-        <p class="desc">${cfg.desc}</p>
+        ${cfg.desc ? `<p class="desc">${cfg.desc}</p>` : ''}
         ${cfg.charts.length ? `<div class="filters"><span class="label">기간</span><div class="years" data-years="${id}"></div></div>` : ''}
         ${body}
       </section>`);
@@ -1350,6 +1441,10 @@ function showPage(hash) {
   let [page, sub] = hash.split('/');
   if (page === 'growth' && sub === 'us-gdp') [page, sub] = ['gdp', 'chg'];
   if (!PAGES[page]) page = 'rates';
+  // 내용 없는 상위 메뉴(산업 등)는 첫 하위 페이지를 보여줌
+  const empty = (p) => !PAGES[p].charts.length && !PAGES[p].nipa && !PAGES[p].panels;
+  const firstChild = NAV_ORDER.find((p) => PAGES[p]?.parent === page);
+  if (empty(page) && firstChild) [page, sub] = [firstChild, undefined];
   state.page = page;
   if (PAGES[page].subtabs) {
     if (PAGES[page].subtabs.some(([s]) => s === sub)) state.sub[page] = sub;
