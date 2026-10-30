@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261030p';
+const VERSION = '20261030q';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -38,6 +38,11 @@ const LONG_DB = {
   gdi_quarterly: { url: `${FRED_REPO_DB}us_macro_NIPA_GDI.db.gz`, obs: 'obs_quarterly' },
   z1hh_quarterly: { url: `${FRED_REPO_DB}us_macro_Z1_Households_BS.db.gz`, obs: 'obs_quarterly' },
   z1nfc_quarterly: { url: `${FRED_REPO_DB}us_macro_Z1_Nonfin_Corp_BS.db.gz`, obs: 'obs_quarterly' },
+  // H.8 은행 DB 하나를 주기별 표로 나눠 읽음 (워커가 같은 주소는 한 번만 받음)
+  h8_weekly: { url: `${FRED_REPO_DB}us_macro_banks.db.gz`, obs: 'obs_weekly' },
+  h8_monthly: { url: `${FRED_REPO_DB}us_macro_banks.db.gz`, obs: 'obs_monthly' },
+  h8_quarterly: { url: `${FRED_REPO_DB}us_macro_banks.db.gz`, obs: 'obs_quarterly' },
+  h8_annual: { url: `${FRED_REPO_DB}us_macro_banks.db.gz`, obs: 'obs_annual' },
 };
 const freqOf = (table) => table.split('_')[1];
 
@@ -412,6 +417,285 @@ const Z1_S111B = [
   ['HCVSRNWCHBSNNCB', '구조물 취득원가: 주거용', 0, 'Nonfinancial corporate business; residential structures, historical cost basis'],
   ['HCVSNNWHCBSNNCB', '구조물 취득원가: 비주거용', 0, 'Nonfinancial corporate business; nonresidential structures, historical cost basis'],
 ].map(([t, name, level, en, isNew], i) => [i + 1, t, 'z1nfc_quarterly', name, level, en, !!isNew]);
+// H.8 상업은행 자산·부채 (FRED release 22, All Commercial Banks). 줄 번호는 원표 그대로 (증가율 표는 일부 줄 없음)
+// 원표 행: [줄, 티커, 항목명, 단계, 영문, 처음에 접힘, 단위 환산(백만 달러 줄 → 십억 달러)]
+// FRED 월간 계절조정 잔액 표 30줄은 증가율 시리즈가 잘못 걸려 있어 잔액 시리즈(H8B3092NCBAM)로 바꿈
+const h8Rows = (table, rows) => rows.map(([line, t, name, level, en, fold, scale]) => [line, t, table, name, level, en, !!fold, scale]);
+const H8_W_SA = h8Rows('h8_weekly', [
+    [1, 'TOTBKCR', '은행 신용', 1, 'Bank credit', 0],
+    [2, 'SBCACBW027SBOG', '증권', 2, 'Securities in bank credit', 0],
+    [3, 'TASACBW027SBOG', '국채·정부기관채', 3, 'Treasury and agency securities', 0],
+    [4, 'TMBACBW027SBOG', 'MBS', 4, 'Mortgage-backed securities (MBS)', 0],
+    [5, 'TNMACBW027SBOG', 'MBS 외', 4, 'Non-MBS', 0],
+    [6, 'OSEACBW027SBOG', '기타 증권', 3, 'Other Securities', 0],
+    [7, 'OMBACBW027SBOG', 'MBS', 4, 'Mortgage-backed securities (MBS)', 0],
+    [8, 'ONMACBW027SBOG', 'MBS 외', 4, 'Non-MBS', 0],
+    [9, 'TOTLL', '대출·리스', 2, 'Loans and leases in bank credit', 0],
+    [10, 'TOTCI', 'C&I 대출', 3, 'Commercial and industrial loans', 0],
+    [11, 'RELACBW027SBOG', '부동산 대출', 3, 'Real estate loans', 0],
+    [12, 'RREACBW027SBOG', '주거용', 4, 'Residential real estate loans', 0],
+    [13, 'RHEACBW027SBOG', '주택담보 한도대출 (HELOC)', 5, 'Revolving home equity loans', 1],
+    [14, 'CRLACBW027SBOG', '주택담보대출 (일반)', 5, 'Closed-end residential loans', 1],
+    [15, 'CREACBW027SBOG', '상업용 부동산 (CRE)', 4, 'Commercial real estate loans', 0],
+    [16, 'CLDACBW027SBOG', '건설·토지개발', 5, 'Construction and land development loans', 1],
+    [17, 'SBFACBW027SBOG', '농지 담보', 5, 'Secured by farmland', 1],
+    [18, 'SMPACBW027SBOG', '다가구 주택 담보', 5, 'Secured by multifamily properties', 1],
+    [19, 'SNFACBW027SBOG', '비농업 비주거용 담보', 5, 'Secured by nonfarm nonresidential properties', 1],
+    [20, 'CLSACBW027SBOG', '소비자 대출', 3, 'Consumer Loans', 0],
+    [21, 'CCLACBW027SBOG', '신용카드·리볼빙', 4, 'Credit cards and other revolving plans', 0],
+    [22, 'OCLACBW027SBOG', '기타 소비자 대출', 4, 'Other consumer loans', 0],
+    [23, 'AOCACBW027SBOG', '자동차 대출', 5, 'Automobile loans', 1],
+    [24, 'CARACBW027SBOG', '그 밖의 소비자 대출', 5, 'All other consumer loans', 1],
+    [25, 'AOLACBW027SBOG', '기타 대출·리스', 3, 'All other loans and leases', 0],
+    [26, 'LNFACBW027SBOG', '비은행 금융기관 대출', 4, 'Loans to nondepository financial institutions', 0],
+    [27, 'OLNACBW027SBOG', '그 외 대출', 4, 'All loans not elsewhere classified', 0],
+    [28, 'ALLACBW027SBOG', '(차감) 대손충당금', 2, 'LESS: Allowance for loan and lease losses', 0],
+    [29, 'CASACBW027SBOG', '현금성 자산', 1, 'Cash Assets', 0],
+    [30, 'H8B3092NCBA', '연방기금 매도·역RP', 1, 'Total federal funds sold and reverse RPs', 0, 0.001],
+    [31, 'LCBACBW027SBOG', '상업은행 대출', 1, 'Loans to commercial banks', 0],
+    [32, 'H8B3053NCBA', '기타 자산 (트레이딩 자산 포함)', 1, 'Other assets including trading assets', 0, 0.001],
+    [33, 'TLAACBW027SBOG', '총자산', 1, 'Total Assets', 0],
+    [34, 'DPSACBW027SBOG', '예금', 1, 'Deposits', 0],
+    [35, 'LTDACBW027SBOG', '거액 정기예금', 2, 'Large time deposits', 0],
+    [36, 'ODSACBW027SBOG', '기타 예금', 2, 'Other deposits', 0],
+    [37, 'H8B3094NCBA', '차입', 1, 'Borrowings', 0, 0.001],
+    [38, 'NDFACBW027SBOG', '해외 관계사 순부채', 1, 'Net due to related foreign offices', 0],
+    [39, 'H8B3095NCBA', '기타 부채 (트레이딩 부채 포함)', 1, 'Other liabilities including trading liabilities', 0, 0.001],
+    [40, 'TLBACBW027SBOG', '총부채', 1, 'Total Liabilities', 0],
+    [41, 'RALACBW027SBOG', '잔여 (자산 − 부채)', 1, 'Residual (Assets Less Liabilities)', 0],
+  ]);
+const H8_W_NSA = h8Rows('h8_weekly', [
+    [1, 'TOTBKCRNSA', '은행 신용', 1, 'Bank credit', 0],
+    [2, 'SBCACBW027NBOG', '증권', 2, 'Securities in bank credit', 0],
+    [3, 'TASACBW027NBOG', '국채·정부기관채', 3, 'Treasury and agency securities', 0],
+    [4, 'TMBACBW027NBOG', 'MBS', 4, 'Mortgage-backed securities (MBS)', 0],
+    [5, 'TNMACBW027NBOG', 'MBS 외', 4, 'Non-MBS', 0],
+    [6, 'OSEACBW027NBOG', '기타 증권', 3, 'Other Securities', 0],
+    [7, 'OMBACBW027NBOG', 'MBS', 4, 'Mortgage-backed securities (MBS)', 0],
+    [8, 'ONMACBW027NBOG', 'MBS 외', 4, 'Non-MBS', 0],
+    [9, 'TOTLLNSA', '대출·리스', 2, 'Loans and leases in bank credit', 0],
+    [10, 'TOTCINSA', 'C&I 대출', 3, 'Commercial and industrial loans', 0],
+    [11, 'RELACBW027NBOG', '부동산 대출', 3, 'Real estate loans', 0],
+    [12, 'RREACBW027NBOG', '주거용', 4, 'Residential real estate loans', 0],
+    [13, 'RHEACBW027NBOG', '주택담보 한도대출 (HELOC)', 5, 'Revolving home equity loans', 1],
+    [14, 'CRLACBW027NBOG', '주택담보대출 (일반)', 5, 'Closed-end residential loans', 1],
+    [15, 'CREACBW027NBOG', '상업용 부동산 (CRE)', 4, 'Commercial real estate loans', 0],
+    [16, 'CLDACBW027NBOG', '건설·토지개발', 5, 'Construction and land development loans', 1],
+    [17, 'SBFACBW027NBOG', '농지 담보', 5, 'Secured by farmland', 1],
+    [18, 'SMPACBW027NBOG', '다가구 주택 담보', 5, 'Secured by multifamily properties', 1],
+    [19, 'SNFACBW027NBOG', '비농업 비주거용 담보', 5, 'Secured by nonfarm nonresidential properties', 1],
+    [20, 'CLSACBW027NBOG', '소비자 대출', 3, 'Consumer Loans', 0],
+    [21, 'CCLACBW027NBOG', '신용카드·리볼빙', 4, 'Credit cards and other revolving plans', 0],
+    [22, 'OCLACBW027NBOG', '기타 소비자 대출', 4, 'Other consumer loans', 0],
+    [23, 'CARACBW027NBOG', '자동차 대출', 5, 'Automobile loans', 1],
+    [24, 'AOCACBW027NBOG', '그 밖의 소비자 대출', 5, 'All other consumer loans', 1],
+    [25, 'AOLACBW027NBOG', '기타 대출·리스', 3, 'All other loans and leases', 0],
+    [26, 'LNFACBW027NBOG', '비은행 금융기관 대출', 4, 'Loans to nondepository financial institutions', 0],
+    [27, 'OLNACBW027NBOG', '그 외 대출', 4, 'All loans not elsewhere classified', 0],
+    [28, 'ALLACBW027NBOG', '(차감) 대손충당금', 2, 'LESS: Allowance for loan and lease losses', 0],
+    [29, 'CASACBW027NBOG', '현금성 자산', 1, 'Cash Assets', 0],
+    [30, 'H8B3092NCBD', '연방기금 매도·역RP', 1, 'Total federal funds sold and reverse RPs', 0, 0.001],
+    [31, 'LCBACBW027NBOG', '상업은행 대출', 1, 'Loans to commercial banks', 0],
+    [32, 'H8B3053NCBD', '기타 자산 (트레이딩 자산 포함)', 1, 'Other assets including trading assets', 0, 0.001],
+    [33, 'TLAACBW027NBOG', '총자산', 1, 'Total Assets', 0],
+    [34, 'DPSACBW027NBOG', '예금', 1, 'Deposits', 0],
+    [35, 'LTDACBW027NBOG', '거액 정기예금', 2, 'Large time deposits', 0],
+    [36, 'ODSACBW027NBOG', '기타 예금', 2, 'Other deposits', 0],
+    [37, 'H8B3094NCBD', '차입', 1, 'Borrowings', 0, 0.001],
+    [38, 'NDFACBW027NBOG', '해외 관계사 순부채', 1, 'Net due to related foreign offices', 0],
+    [39, 'H8B3095NCBD', '기타 부채 (트레이딩 부채 포함)', 1, 'Other liabilities including trading liabilities', 0, 0.001],
+    [40, 'TLBACBW027NBOG', '총부채', 1, 'Total Liabilities', 0],
+    [41, 'RALACBW027NBOG', '잔여 (자산 − 부채)', 1, 'Residual (Assets Less Liabilities)', 0],
+  ]);
+const H8_M_SA = h8Rows('h8_monthly', [
+    [1, 'LOANINV', '은행 신용', 1, 'Bank credit', 0],
+    [2, 'INVEST', '증권', 2, 'Securities in bank credit', 0],
+    [3, 'USGSEC', '국채·정부기관채', 3, 'Treasury and agency securities', 0],
+    [4, 'TMBACBM027SBOG', 'MBS', 4, 'Mortgage-backed securities (MBS)', 0],
+    [5, 'TNMACBM027SBOG', 'MBS 외', 4, 'Non-MBS', 0],
+    [6, 'OTHSEC', '기타 증권', 3, 'Other Securities', 0],
+    [7, 'OMBACBM027SBOG', 'MBS', 4, 'Mortgage-backed securities (MBS)', 0],
+    [8, 'ONMACBM027SBOG', 'MBS 외', 4, 'Non-MBS', 0],
+    [9, 'LOANS', '대출·리스', 2, 'Loans and leases in bank credit', 0],
+    [10, 'BUSLOANS', 'C&I 대출', 3, 'Commercial and industrial loans', 0],
+    [11, 'REALLN', '부동산 대출', 3, 'Real estate loans', 0],
+    [12, 'RREACBM027SBOG', '주거용', 4, 'Residential real estate loans', 0],
+    [13, 'RHEACBM027SBOG', '주택담보 한도대출 (HELOC)', 5, 'Revolving home equity loans', 1],
+    [14, 'CRLACBM027SBOG', '주택담보대출 (일반)', 5, 'Closed-end residential loans', 1],
+    [15, 'CREACBM027SBOG', '상업용 부동산 (CRE)', 4, 'Commercial real estate loans', 0],
+    [16, 'CLDACBM027SBOG', '건설·토지개발', 5, 'Construction and land development loans', 1],
+    [17, 'SBFACBM027SBOG', '농지 담보', 5, 'Secured by farmland', 1],
+    [18, 'SMPACBM027SBOG', '다가구 주택 담보', 5, 'Secured by multifamily properties', 1],
+    [19, 'SNFACBM027SBOG', '비농업 비주거용 담보', 5, 'Secured by nonfarm nonresidential properties', 1],
+    [20, 'CONSUMER', '소비자 대출', 3, 'Consumer Loans', 0],
+    [21, 'CCLACBM027SBOG', '신용카드·리볼빙', 4, 'Credit cards and other revolving plans', 0],
+    [22, 'OCLACBM027SBOG', '기타 소비자 대출', 4, 'Other consumer loans', 0],
+    [23, 'CARACBM027SBOG', '자동차 대출', 5, 'Automobile loans', 1],
+    [24, 'AOCACBM027SBOG', '그 밖의 소비자 대출', 5, 'All other consumer loans', 1],
+    [25, 'AOLACBM027SBOG', '기타 대출·리스', 3, 'All other loans and leases', 0],
+    [26, 'LNFACBM027SBOG', '비은행 금융기관 대출', 4, 'Loans to nondepository financial institutions', 0],
+    [27, 'OLNACBM027SBOG', '그 외 대출', 4, 'All loans not elsewhere classified', 0],
+    [28, 'ALLACBM027SBOG', '(차감) 대손충당금', 2, 'LESS: Allowance for loan and lease losses', 0],
+    [29, 'CASACBM027SBOG', '현금성 자산', 1, 'Cash Assets', 0],
+    [30, 'H8B3092NCBAM', '연방기금 매도·역RP', 1, 'Total federal funds sold and reverse RPs', 0, 0.001],
+    [31, 'LCBACBM027SBOG', '상업은행 대출', 1, 'Loans to commercial banks', 0],
+    [32, 'H8B3053NCBAM', '기타 자산 (트레이딩 자산 포함)', 1, 'Other assets including trading assets', 0, 0.001],
+    [33, 'TLAACBM027SBOG', '총자산', 1, 'Total Assets', 0],
+    [34, 'DPSACBM027SBOG', '예금', 1, 'Deposits', 0],
+    [35, 'LTDACBM027SBOG', '거액 정기예금', 2, 'Large time deposits', 0],
+    [36, 'ODSACBM027SBOG', '기타 예금', 2, 'Other deposits', 0],
+    [37, 'H8B3094NCBAM', '차입', 1, 'Borrowings', 0, 0.001],
+    [38, 'NDFACBM027SBOG', '해외 관계사 순부채', 1, 'Net due to related foreign offices', 0],
+    [39, 'H8B3095NCBAM', '기타 부채 (트레이딩 부채 포함)', 1, 'Other liabilities including trading liabilities', 0, 0.001],
+    [40, 'TLBACBM027SBOG', '총부채', 1, 'Total Liabilities', 0],
+    [41, 'RALACBM027SBOG', '잔여 (자산 − 부채)', 1, 'Residual (Assets Less Liabilities)', 0],
+  ]);
+const H8_M_NSA = h8Rows('h8_monthly', [
+    [1, 'LOANINVNSA', '은행 신용', 1, 'Bank credit', 0],
+    [2, 'INVESTNSA', '증권', 2, 'Securities in bank credit', 0],
+    [3, 'USGSECNSA', '국채·정부기관채', 3, 'Treasury and agency securities', 0],
+    [4, 'TMBACBM027NBOG', 'MBS', 4, 'Mortgage-backed securities (MBS)', 0],
+    [5, 'TNMACBM027NBOG', 'MBS 외', 4, 'Non-MBS', 0],
+    [6, 'OTHSECNSA', '기타 증권', 3, 'Other Securities', 0],
+    [7, 'OMBACBM027NBOG', 'MBS', 4, 'Mortgage-backed securities (MBS)', 0],
+    [8, 'ONMACBM027NBOG', 'MBS 외', 4, 'Non-MBS', 0],
+    [9, 'LOANSNSA', '대출·리스', 2, 'Loans and leases in bank credit', 0],
+    [10, 'BUSLOANSNSA', 'C&I 대출', 3, 'Commercial and industrial loans', 0],
+    [11, 'REALLNNSA', '부동산 대출', 3, 'Real estate loans', 0],
+    [12, 'RREACBM027NBOG', '주거용', 4, 'Residential real estate loans', 0],
+    [13, 'RHEACBM027NBOG', '주택담보 한도대출 (HELOC)', 5, 'Revolving home equity loans', 1],
+    [14, 'CRLACBM027NBOG', '주택담보대출 (일반)', 5, 'Closed-end residential loans', 1],
+    [15, 'CREACBM027NBOG', '상업용 부동산 (CRE)', 4, 'Commercial real estate loans', 0],
+    [16, 'CLDACBM027NBOG', '건설·토지개발', 5, 'Construction and land development loans', 1],
+    [17, 'SBFACBM027NBOG', '농지 담보', 5, 'Secured by farmland', 1],
+    [18, 'SMPACBM027NBOG', '다가구 주택 담보', 5, 'Secured by multifamily properties', 1],
+    [19, 'SNFACBM027NBOG', '비농업 비주거용 담보', 5, 'Secured by nonfarm nonresidential properties', 1],
+    [20, 'CONSUMERNSA', '소비자 대출', 3, 'Consumer Loans', 0],
+    [21, 'CCLACBM027NBOG', '신용카드·리볼빙', 4, 'Credit cards and other revolving plans', 0],
+    [22, 'OCLACBM027NBOG', '기타 소비자 대출', 4, 'Other consumer loans', 0],
+    [23, 'CARACBM027NBOG', '자동차 대출', 5, 'Automobile loans', 1],
+    [24, 'AOCACBM027NBOG', '그 밖의 소비자 대출', 5, 'All other consumer loans', 1],
+    [25, 'AOLACBM027NBOG', '기타 대출·리스', 3, 'All other loans and leases', 0],
+    [26, 'LNFACBM027NBOG', '비은행 금융기관 대출', 4, 'Loans to nondepository financial institutions', 0],
+    [27, 'OLNACBM027NBOG', '그 외 대출', 4, 'All loans not elsewhere classified', 0],
+    [28, 'ALLACBM027NBOG', '(차감) 대손충당금', 2, 'LESS: Allowance for loan and lease losses', 0],
+    [29, 'CASACBM027NBOG', '현금성 자산', 1, 'Cash Assets', 0],
+    [30, 'H8B3092NCBDM', '연방기금 매도·역RP', 1, 'Total federal funds sold and reverse RPs', 0, 0.001],
+    [31, 'LCBACBM027NBOG', '상업은행 대출', 1, 'Loans to commercial banks', 0],
+    [32, 'H8B3053NCBDM', '기타 자산 (트레이딩 자산 포함)', 1, 'Other assets including trading assets', 0, 0.001],
+    [33, 'TLAACBM027NBOG', '총자산', 1, 'Total Assets', 0],
+    [34, 'DPSACBM027NBOG', '예금', 1, 'Deposits', 0],
+    [35, 'LTDACBM027NBOG', '거액 정기예금', 2, 'Large time deposits', 0],
+    [36, 'ODSACBM027NBOG', '기타 예금', 2, 'Other deposits', 0],
+    [37, 'H8B3094NCBDM', '차입', 1, 'Borrowings', 0, 0.001],
+    [38, 'NDFACBM027NBOG', '해외 관계사 순부채', 1, 'Net due to related foreign offices', 0],
+    [39, 'H8B3095NCBDM', '기타 부채 (트레이딩 부채 포함)', 1, 'Other liabilities including trading liabilities', 0, 0.001],
+    [40, 'TLBACBM027NBOG', '총부채', 1, 'Total Liabilities', 0],
+    [41, 'RALACBM027NBOG', '잔여 (자산 − 부채)', 1, 'Residual (Assets Less Liabilities)', 0],
+  ]);
+const H8_M_RATE = h8Rows('h8_monthly', [
+    [1, 'H8B1001NCBCMG', '은행 신용', 1, 'Bank credit', 0],
+    [2, 'H8B1002NCBCMG', '증권', 2, 'Securities in bank credit', 0],
+    [3, 'H8B1003NCBCMG', '국채·정부기관채', 3, 'Treasury and agency securities', 0],
+    [4, 'H8B1301NCBCMG', 'MBS', 4, 'Mortgage-backed securities (MBS)', 0],
+    [5, 'H8B1302NCBCMG', 'MBS 외', 4, 'Non-MBS', 0],
+    [6, 'H8B1011NCBCMG', '기타 증권', 3, 'Other Securities', 0],
+    [7, 'H8B1303NCBCMG', 'MBS', 4, 'Mortgage-backed securities (MBS)', 0],
+    [8, 'H8B1304NCBCMG', 'MBS 외', 4, 'Non-MBS', 0],
+    [9, 'H8B1020NCBCMG', '대출·리스', 2, 'Loans and leases in bank credit', 0],
+    [10, 'H8B1023NCBCMG', 'C&I 대출', 3, 'Commercial and industrial loans', 0],
+    [11, 'H8B1026NCBCMG', '부동산 대출', 3, 'Real estate loans', 0],
+    [12, 'H8B1221NCBCMG', '주거용', 4, 'Residential real estate loans', 0],
+    [13, 'H8B1027NCBCMG', '주택담보 한도대출 (HELOC)', 5, 'Revolving home equity loans', 1],
+    [14, 'H8B1220NCBCMG', '주택담보대출 (일반)', 5, 'Closed-end residential loans', 1],
+    [15, 'H8B3219NCBCMG', '상업용 부동산 (CRE)', 4, 'Commercial real estate loans', 0],
+    [20, 'H8B1029NCBCMG', '소비자 대출', 3, 'Consumer Loans', 0],
+    [21, 'H8B1247NCBCMG', '신용카드·리볼빙', 4, 'Credit cards and other revolving plans', 0],
+    [22, 'H8B3248NCBCMG', '기타 소비자 대출', 4, 'Other consumer loans', 0],
+    [25, 'H8B3305NCBCMG', '기타 대출·리스', 3, 'All other loans and leases', 0],
+    [28, 'H8B1043NCBCMG', '(차감) 대손충당금', 2, 'LESS: Allowance for loan and lease losses', 0],
+    [29, 'H8B1048NCBCMG', '현금성 자산', 1, 'Cash Assets', 0],
+    [30, 'H8B3092NCBCMG', '연방기금 매도·역RP', 1, 'Total federal funds sold and reverse RPs', 0],
+    [31, 'H8B1047NCBCMG', '상업은행 대출', 1, 'Loans to commercial banks', 0],
+    [32, 'H8B3053NCBCMG', '기타 자산 (트레이딩 자산 포함)', 1, 'Other assets including trading assets', 0],
+    [33, 'H8B1151NCBCMG', '총자산', 1, 'Total Assets', 0],
+    [34, 'H8B1058NCBCMG', '예금', 1, 'Deposits', 0],
+    [35, 'H8B1072NCBCMG', '거액 정기예금', 2, 'Large time deposits', 0],
+    [36, 'H8B1110NCBCMG', '기타 예금', 2, 'Other deposits', 0],
+    [37, 'H8B3094NCBCMG', '차입', 1, 'Borrowings', 0],
+    [39, 'H8B3095NCBCMG', '기타 부채 (트레이딩 부채 포함)', 1, 'Other liabilities including trading liabilities', 0],
+    [40, 'H8B1152NCBCMG', '총부채', 1, 'Total Liabilities', 0],
+    [41, 'H8B1091NCBCMG', '잔여 (자산 − 부채)', 1, 'Residual (Assets Less Liabilities)', 0],
+  ]);
+const H8_Q_RATE = h8Rows('h8_quarterly', [
+    [1, 'BC0ACBQ158SBOG', '은행 신용', 1, 'Bank credit', 0],
+    [2, 'SBCACBQ158SBOG', '증권', 2, 'Securities in bank credit', 0],
+    [3, 'TASACBQ158SBOG', '국채·정부기관채', 3, 'Treasury and agency securities', 0],
+    [4, 'H8B1301NCBCQG', 'MBS', 4, 'Mortgage-backed securities (MBS)', 0],
+    [5, 'H8B1302NCBCQG', 'MBS 외', 4, 'Non-MBS', 0],
+    [6, 'OSEACBQ158SBOG', '기타 증권', 3, 'Other Securities', 0],
+    [7, 'H8B1303NCBCQG', 'MBS', 4, 'Mortgage-backed securities (MBS)', 0],
+    [8, 'H8B1304NCBCQG', 'MBS 외', 4, 'Non-MBS', 0],
+    [9, 'LLBACBQ158SBOG', '대출·리스', 2, 'Loans and leases in bank credit', 0],
+    [10, 'CILACBQ158SBOG', 'C&I 대출', 3, 'Commercial and industrial loans', 0],
+    [11, 'RELACBQ158SBOG', '부동산 대출', 3, 'Real estate loans', 0],
+    [12, 'RREACBQ158SBOG', '주거용', 4, 'Residential real estate loans', 0],
+    [13, 'RHEACBQ158SBOG', '주택담보 한도대출 (HELOC)', 5, 'Revolving home equity loans', 1],
+    [14, 'CRLACBQ158SBOG', '주택담보대출 (일반)', 5, 'Closed-end residential loans', 1],
+    [15, 'CREACBQ158SBOG', '상업용 부동산 (CRE)', 4, 'Commercial real estate loans', 0],
+    [20, 'CLSACBQ158SBOG', '소비자 대출', 3, 'Consumer Loans', 0],
+    [21, 'CCLACBQ158SBOG', '신용카드·리볼빙', 4, 'Credit cards and other revolving plans', 0],
+    [22, 'OCLACBQ158SBOG', '기타 소비자 대출', 4, 'Other consumer loans', 0],
+    [25, 'H8B3305NCBCQG', '기타 대출·리스', 3, 'All other loans and leases', 0],
+    [28, 'ALLACBQ158SBOG', '(차감) 대손충당금', 2, 'LESS: Allowance for loan and lease losses', 0],
+    [29, 'CASACBQ158SBOG', '현금성 자산', 1, 'Cash Assets', 0],
+    [30, 'H8B3092NCBCQG', '연방기금 매도·역RP', 1, 'Total federal funds sold and reverse RPs', 0],
+    [31, 'H8B1047NCBCQG', '상업은행 대출', 1, 'Loans to commercial banks', 0],
+    [32, 'H8B3053NCBCQG', '기타 자산 (트레이딩 자산 포함)', 1, 'Other assets including trading assets', 0],
+    [33, 'TLAACBQ158SBOG', '총자산', 1, 'Total Assets', 0],
+    [34, 'DPSACBQ158SBOG', '예금', 1, 'Deposits', 0],
+    [35, 'LTDACBQ158SBOG', '거액 정기예금', 2, 'Large time deposits', 0],
+    [36, 'ODSACBQ158SBOG', '기타 예금', 2, 'Other deposits', 0],
+    [37, 'H8B3094NCBCQG', '차입', 1, 'Borrowings', 0],
+    [39, 'H8B3095NCBCQG', '기타 부채 (트레이딩 부채 포함)', 1, 'Other liabilities including trading liabilities', 0],
+    [40, 'TLBACBQ158SBOG', '총부채', 1, 'Total Liabilities', 0],
+    [41, 'H8B1091NCBCQG', '잔여 (자산 − 부채)', 1, 'Residual (Assets Less Liabilities)', 0],
+  ]);
+const H8_A_RATE = h8Rows('h8_annual', [
+    [1, 'H8B1001NCBCAG', '은행 신용', 1, 'Bank credit', 0],
+    [2, 'H8B1002NCBCAG', '증권', 2, 'Securities in bank credit', 0],
+    [3, 'H8B1003NCBCAG', '국채·정부기관채', 3, 'Treasury and agency securities', 0],
+    [4, 'H8B1301NCBCAG', 'MBS', 4, 'Mortgage-backed securities (MBS)', 0],
+    [5, 'H8B1302NCBCAG', 'MBS 외', 4, 'Non-MBS', 0],
+    [6, 'H8B1011NCBCAG', '기타 증권', 3, 'Other Securities', 0],
+    [7, 'H8B1303NCBCAG', 'MBS', 4, 'Mortgage-backed securities (MBS)', 0],
+    [8, 'H8B1304NCBCAG', 'MBS 외', 4, 'Non-MBS', 0],
+    [9, 'H8B1020NCBCAG', '대출·리스', 2, 'Loans and leases in bank credit', 0],
+    [10, 'H8B1023NCBCAG', 'C&I 대출', 3, 'Commercial and industrial loans', 0],
+    [11, 'H8B1026NCBCAG', '부동산 대출', 3, 'Real estate loans', 0],
+    [12, 'H8B1221NCBCAG', '주거용', 4, 'Residential real estate loans', 0],
+    [13, 'H8B1027NCBCAG', '주택담보 한도대출 (HELOC)', 5, 'Revolving home equity loans', 1],
+    [14, 'H8B1220NCBCAG', '주택담보대출 (일반)', 5, 'Closed-end residential loans', 1],
+    [15, 'H8B3219NCBCAG', '상업용 부동산 (CRE)', 4, 'Commercial real estate loans', 0],
+    [20, 'H8B1029NCBCAG', '소비자 대출', 3, 'Consumer Loans', 0],
+    [21, 'H8B1247NCBCAG', '신용카드·리볼빙', 4, 'Credit cards and other revolving plans', 0],
+    [22, 'H8B3248NCBCAG', '기타 소비자 대출', 4, 'Other consumer loans', 0],
+    [25, 'H8B3305NCBCAG', '기타 대출·리스', 3, 'All other loans and leases', 0],
+    [28, 'H8B1043NCBCAG', '(차감) 대손충당금', 2, 'LESS: Allowance for loan and lease losses', 0],
+    [29, 'H8B1048NCBCAG', '현금성 자산', 1, 'Cash Assets', 0],
+    [30, 'H8B3092NCBCAG', '연방기금 매도·역RP', 1, 'Total federal funds sold and reverse RPs', 0],
+    [31, 'H8B1047NCBCAG', '상업은행 대출', 1, 'Loans to commercial banks', 0],
+    [32, 'H8B3053NCBCAG', '기타 자산 (트레이딩 자산 포함)', 1, 'Other assets including trading assets', 0],
+    [33, 'H8B1151NCBCAG', '총자산', 1, 'Total Assets', 0],
+    [34, 'H8B1058NCBCAG', '예금', 1, 'Deposits', 0],
+    [35, 'H8B1072NCBCAG', '거액 정기예금', 2, 'Large time deposits', 0],
+    [36, 'H8B1110NCBCAG', '기타 예금', 2, 'Other deposits', 0],
+    [37, 'H8B3094NCBCAG', '차입', 1, 'Borrowings', 0],
+    [39, 'H8B3095NCBCAG', '기타 부채 (트레이딩 부채 포함)', 1, 'Other liabilities including trading liabilities', 0],
+    [40, 'H8B1152NCBCAG', '총부채', 1, 'Total Liabilities', 0],
+    [41, 'H8B1091NCBCAG', '잔여 (자산 − 부채)', 1, 'Residual (Assets Less Liabilities)', 0],
+  ]);
+const H8_TABLE = (eid) => `https://fred.stlouisfed.org/release/tables?rid=22&eid=${eid}`;
 const FRED_TABLE = (eid) => `https://fred.stlouisfed.org/release/tables?rid=53&eid=${eid}`;
 
 // ===== 사이드바 묶음 · 페이지 · 차트 정의 =====
@@ -421,7 +705,7 @@ const FRED_TABLE = (eid) => `https://fred.stlouisfed.org/release/tables?rid=53&e
 const GROUPS = [['us', '미국']];
 // 사이드바 순서 (Bloomberg ECST 분류 기준). 하위 페이지(parent)는 상위 바로 뒤에. 여기 없는 페이지는 그 뒤에 정의 순서대로
 const NAV_ORDER = ['growth', 'gdp', 'flow', 'inflation', 'labor', 'industry', 'business', 'household', 'housing',
-  'trade', 'fiscal', 'money', 'finance', 'credit', 'rates'];
+  'trade', 'fiscal', 'money', 'banks', 'finance', 'credit', 'rates'];
 
 const PAGES = {
   rates: {
@@ -887,7 +1171,32 @@ const PAGES = {
   },
   trade: { group: 'us', title: '국제수지 및 무역', desc: '준비 중이에요.', charts: [] },
   fiscal: { group: 'us', title: '정부재정과 부채', desc: '준비 중이에요.', charts: [] },
-  money: { group: 'us', title: '통화', desc: '준비 중이에요.', charts: [] },
+  money: { group: 'us', title: '통화', charts: [] },
+  banks: {
+    group: 'us',
+    parent: 'money',
+    title: '은행 대차대조표',
+    desc: '연준 H.8 미국 상업은행 자산·부채(All Commercial Banks) 기준 — fred 리포 은행 DB를 바로 읽어요. 매주 금요일 발표, 수요일 기준.',
+    subtabs: [['w', '주간'], ['m', '월간'], ['q', '분기'], ['a', '연간']],
+    defaultPeriod: 's2020',
+    // variants: 같은 표의 다른 판(계절조정·원계열·증가율)을 버튼으로 고름
+    nipa: [
+      { sub: 'w', id: 'h8-w', title: '상업은행 자산·부채 (주간)', digits: 1, highlight: [33, 40], sep: [34], src: H8_TABLE(822915), variants: [
+        { key: 'sa', label: '잔액 (계절조정)', rows: H8_W_SA, unit: '십억 달러' },
+        { key: 'nsa', label: '잔액 (원계열)', rows: H8_W_NSA, unit: '십억 달러' },
+      ], note: '수요일 기준 잔액(십억 달러). 총자산 − 총부채 = 잔여(자본에 해당). ▸ 줄을 누르면 세부 항목이 펼쳐져요.' },
+      { sub: 'm', id: 'h8-m', title: '상업은행 자산·부채 (월간)', digits: 1, highlight: [33, 40], sep: [34], src: H8_TABLE(822785), variants: [
+        { key: 'sa', label: '잔액 (계절조정)', rows: H8_M_SA, unit: '십억 달러' },
+        { key: 'nsa', label: '잔액 (원계열)', rows: H8_M_NSA, unit: '십억 달러' },
+        { key: 'rate', label: '증가율 (계절조정, 연율)', rows: H8_M_RATE, unit: '%' },
+      ], note: '월평균 잔액(십억 달러) 또는 전월 대비 연율 증가율(%). 증가율 표에는 일부 세부 줄이 없어요.' },
+      { sub: 'q', id: 'h8-q', title: '상업은행 자산·부채 증가율 (분기)', unit: '%', digits: 1, rows: H8_Q_RATE, src: H8_TABLE(822750), highlight: [33, 40], sep: [34],
+        note: '전기 대비 연율 증가율(%, 계절조정). H.8의 대표 표예요.' },
+      { sub: 'a', id: 'h8-a', title: '상업은행 자산·부채 증가율 (연간)', unit: '%', digits: 1, rows: H8_A_RATE, src: H8_TABLE(822715), highlight: [33, 40], sep: [34],
+        note: '전년 대비 증가율(%, 계절조정).' },
+    ],
+    charts: [],
+  },
   finance: { group: 'us', title: '금융지표', charts: [] },
   business: {
     group: 'us',
@@ -967,7 +1276,7 @@ const PAGES = {
 // ===== 상태 =====
 // panel: 패널 id → { mode: 'mom'|'yoy', slots: Map(티커 → 색 번호) }
 // nipa: 발표표 id → { mode: 'yoy'|'qoqa'|'raw', collapsed: Set(접은 줄 번호) }
-const state = { data: {}, page: NAV_ORDER[0], sub: { rates: 'main', gdp: 'chg', flow: 'hh', credit: 'leverage' }, period: {}, tenor: 10, legend: {}, ready: {}, panel: {}, nipa: {} };
+const state = { data: {}, page: NAV_ORDER[0], sub: { rates: 'main', gdp: 'chg', flow: 'hh', banks: 'w', credit: 'leverage' }, period: {}, tenor: 10, legend: {}, ready: {}, panel: {}, nipa: {} };
 const charts = {};
 
 // ===== 유틸 =====
@@ -1352,11 +1661,16 @@ function drawPanel(panel, page) {
 // ===== 발표표 (BEA NIPA 등): 행 = 표의 줄(위계), 열 = 기간 안의 분기 (옛날 → 최신) =====
 // 하위 항목이 있는 줄은 ▾/▸ 로 접고 편다. modes 표는 YoY/QoQ(연율)/원래 값 기준을 고른다.
 const NIPA_MODES = [{ key: 'yoy', label: 'YoY (전년동기비)' }, { key: 'qoqa', label: 'QoQ (전기비 연율)' }, { key: 'raw', label: '원래 값' }];
+// 발표표의 모든 행 (variants 가 있으면 모든 판의 행)
+const nipaRowsAll = (spec) => (spec.variants ? spec.variants.flatMap((v) => v.rows) : spec.rows);
+const nipaVariant = (spec) => spec.variants?.find((v) => v.key === nipaState(spec).variant);
+
 function nipaState(spec) {
   if (!state.nipa[spec.id]) {
-    // 처음엔 세부(새 줄)를 접어 둔다: 바로 아래 줄이 새 줄인 부모 줄을 접힌 상태로 시작
-    const collapsed = new Set(spec.rows.filter((r, i) => spec.rows[i + 1]?.[6] && spec.rows[i + 1][4] > r[4]).map((r) => r[0]));
-    state.nipa[spec.id] = { mode: spec.modes ? 'yoy' : 'raw', collapsed };
+    // 처음엔 세부(새 줄)를 접어 둔다: 바로 아래 줄이 새 줄인 부모 줄을 접힌 상태로 시작 (판마다 줄 번호가 같아 합쳐서 계산)
+    const groups = spec.variants ? spec.variants.map((v) => v.rows) : [spec.rows];
+    const collapsed = new Set(groups.flatMap((rows) => rows.filter((r, i) => rows[i + 1]?.[6] && rows[i + 1][4] > r[4]).map((r) => r[0])));
+    state.nipa[spec.id] = { mode: spec.modes ? 'yoy' : 'raw', variant: spec.variants?.[0].key, collapsed };
   }
   return state.nipa[spec.id];
 }
@@ -1366,8 +1680,10 @@ function drawNipa(spec, page) {
   const { mode, collapsed } = nipaState(spec);
   const pct = mode !== 'raw';
   const noPct = spec.noPct || new Set();
-  const rows = spec.rows.map((row) => {
-    const v = !row[1] || (pct && noPct.has(row[0])) ? null : valuesOf(state.data[row[2]], { exact: row[1], transform: pct ? mode : undefined, scale: !pct && !spec.noScale?.has(row[0]) ? spec.scale : undefined });
+  const variant = nipaVariant(spec);
+  const specRows = variant ? variant.rows : spec.rows;
+  const rows = specRows.map((row) => {
+    const v = !row[1] || (pct && noPct.has(row[0])) ? null : valuesOf(state.data[row[2]], { exact: row[1], transform: pct ? mode : undefined, scale: pct || spec.noScale?.has(row[0]) ? undefined : row[7] ?? spec.scale });
     return { row, at: new Map(v ? pointsInPeriod(v, period) : []) };
   });
   // 위계: 각 줄의 상위 줄 목록, 하위 항목 유무
@@ -1383,10 +1699,12 @@ function drawNipa(spec, page) {
   const digits = pct ? 1 : spec.digits;
   const fmt = (v) => v.toLocaleString('ko-KR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
   const cell = (v) => (v === undefined ? '<td></td>' : `<td class="${v < 0 ? 'down' : ''}">${fmt(v)}</td>`);
-  const unit = pct ? '%' : spec.unit;
+  const unit = pct ? '%' : variant?.unit ?? spec.unit;
+  const freq = freqOf(specRows.find((r) => r[2])[2]);
+  const colLabel = { weekly: ymd, monthly: ym, annual: (t) => String(new Date(t).getUTCFullYear()) }[freq] || quarterLabel;
   const el = document.getElementById(`table-${spec.id}`);
   el.innerHTML = `
-    <thead><tr><th class="line">줄</th><th class="name">항목 (${unit})</th>${quarters.map((t) => `<th>${quarterLabel(t)}</th>`).join('')}</tr></thead>
+    <thead><tr><th class="line">줄</th><th class="name">항목 (${unit})</th>${quarters.map((t) => `<th>${colLabel(t)}</th>`).join('')}</tr></thead>
     <tbody>${rows.map(({ row: [line, t, , name, level, en], at }, i) => {
       const hidden = parents[i].some((l) => collapsed.has(l));
       const toggle = hasKids(i) ? `<span class="fold">${collapsed.has(line) ? '▸' : '▾'}</span>` : '<span class="fold"></span>';
@@ -1403,9 +1721,10 @@ function drawNipa(spec, page) {
     };
   });
   const wrap = el.parentElement;
-  if (wrap.dataset.view !== `${period.key}/${mode}`) { // 기간·기준이 바뀌었을 때만 최신 분기(오른쪽 끝)로 스크롤
+  const view = `${period.key}/${mode}/${variant?.key}`;
+  if (wrap.dataset.view !== view) { // 기간·기준이 바뀌었을 때만 최신 기간(오른쪽 끝)으로 스크롤
     wrap.scrollLeft = wrap.scrollWidth;
-    wrap.dataset.view = `${period.key}/${mode}`;
+    wrap.dataset.view = view;
   }
   const missing = rows.filter((r) => r.row[1] && !r.at.size && !(pct && noPct.has(r.row[0]))).map((r) => r.row[1]);
   document.getElementById(`note-${spec.id}`).textContent = [spec.note, missing.length ? `${periodName(period)} 값 없음: ${missing.join(', ')}` : ''].filter(Boolean).join(' · ');
@@ -1485,6 +1804,7 @@ function buildPages() {
       <div class="panel">
         <h2>${n.title}</h2>
         ${n.modes ? `<div class="filters"><span class="label">기준</span><div class="seg" data-nipa-mode="${n.id}"></div></div>` : ''}
+        ${n.variants ? `<div class="filters"><span class="label">기준</span><div class="seg" data-nipa-var="${n.id}"></div></div>` : ''}
         <p class="note" id="note-${n.id}"></p>
         ${src(n)}
         <div class="table-wrap"><table class="ind-table nipa-table" id="table-${n.id}"></table></div>
@@ -1500,7 +1820,7 @@ function buildPages() {
         <h1><span class="crumb">${groupLabel}</span>${cfg.title}</h1>
         ${cfg.subtabs ? `<nav class="subtabs" data-subtabs="${id}">${cfg.subtabs.map(([s, label]) => `<a href="#${id}/${s}" data-sub="${s}">${label}</a>`).join('')}</nav>` : ''}
         ${cfg.desc ? `<p class="desc">${cfg.desc}</p>` : ''}
-        ${cfg.charts.length ? `<div class="filters"><span class="label">기간</span><div class="years" data-years="${id}"></div></div>` : ''}
+        ${cfg.charts.length || cfg.nipa ? `<div class="filters"><span class="label">기간</span><div class="years" data-years="${id}"></div></div>` : ''}
         ${body}
       </section>`);
   }
@@ -1553,7 +1873,7 @@ function loadTable(name) {
 // 페이지에 필요한 DB 이름 (시장금리는 모든 만기)
 function tablesOf(page) {
   const fromCharts = PAGES[page].charts.flatMap((spec) => allDefs(spec).flatMap((def) => (def.calc ? def.calc.inputs.map((i) => i.table) : [tableOf(spec, def)])));
-  const fromNipa = (PAGES[page].nipa || []).flatMap((n) => n.rows.map((r) => r[2]).filter(Boolean));
+  const fromNipa = (PAGES[page].nipa || []).flatMap((n) => nipaRowsAll(n).map((r) => r[2]).filter(Boolean));
   return [...new Set([...fromCharts, ...(PAGES[page].panels || []).map((p) => p.table), ...fromNipa])];
 }
 
@@ -1568,7 +1888,7 @@ function seriesFor(table) {
       }
     }
     (cfg.panels || []).filter((p) => p.table === table).forEach((p) => p.rows.forEach(([t]) => out.add(t)));
-    (cfg.nipa || []).forEach((n) => n.rows.filter((r) => r[1] && r[2] === table).forEach((r) => out.add(r[1])));
+    (cfg.nipa || []).forEach((n) => nipaRowsAll(n).filter((r) => r[1] && r[2] === table).forEach((r) => out.add(r[1])));
   }
   return [...out];
 }
@@ -1622,6 +1942,12 @@ function allDefs(spec) { return spec.tenors ? TENORS.flatMap(MARKET) : defsOf(sp
 
 // 페이지 차트의 시리즈마다 콜백 (가공된 값 기준)
 function eachSeries(page, fn) {
+  if (!PAGES[page].charts.length) {
+    (PAGES[page].nipa || []).flatMap(nipaRowsAll).filter((r) => r[1]).forEach((r) => {
+      const v = valuesOf(state.data[r[2]], { exact: r[1] });
+      if (v) fn(v, freqOf(r[2]), {});
+    });
+  }
   PAGES[page].charts.forEach((spec) => {
     allDefs(spec).forEach((def) => {
       const v = valuesOf(state.data[tableOf(spec, def)], def);
@@ -1703,7 +2029,7 @@ function customRange(container, page, onPick) {
 
 function setupFilters(page) {
   document.getElementById(`updated-${page}`).textContent = updatedText(page);
-  if (!PAGES[page].charts.length) return;
+  if (!PAGES[page].charts.length && !PAGES[page].nipa) return;
   const singles = yearsWithData(page).map(yearPeriod);
   const ranges = [MAX_PERIOD, ...RANGE_STARTS.map(sincePeriod)];
   // 기본 기간: defaultPeriod(예: 's2000') 가 있으면 그것, 없으면 가장 최근 연도
@@ -1716,6 +2042,9 @@ function setupFilters(page) {
   (PAGES[page].panels || []).forEach((p) => {
     const modes = [{ key: 'mom', label: 'MoM (전월비)' }, { key: 'yoy', label: 'YoY (전년비)' }];
     buttons(document.querySelector(`[data-mode="${p.id}"]`), [modes], panelState(p).mode, (m) => { panelState(p).mode = m.key; drawPanel(p, page); });
+  });
+  (PAGES[page].nipa || []).filter((n) => n.variants).forEach((n) => {
+    buttons(document.querySelector(`[data-nipa-var="${n.id}"]`), [n.variants], nipaState(n).variant, (v) => { nipaState(n).variant = v.key; drawNipa(n, page); });
   });
   (PAGES[page].nipa || []).filter((n) => n.modes).forEach((n) => {
     buttons(document.querySelector(`[data-nipa-mode="${n.id}"]`), [NIPA_MODES], nipaState(n).mode, (m) => { nipaState(n).mode = m.key; drawNipa(n, page); });

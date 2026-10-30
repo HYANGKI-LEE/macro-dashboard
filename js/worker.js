@@ -42,17 +42,39 @@ async function bytesOf(res, url) {
   return new Uint8Array(await new Response(body).arrayBuffer());
 }
 
+// 같은 주소를 여러 표(예: H.8 주간·월간·분기·연간)가 동시에 요청하면 한 번만 받아 같이 쓰고, 다 쓰면 닫는다
+const open = new Map();
+function useDb(name, url) {
+  if (!open.has(url)) {
+    const db = Promise.all([ready, fetch(url, { cache: 'no-cache' })]).then(async ([SQL, res]) => {
+      if (!res.ok) throw new Error(`${name}.db 를 받지 못했어요 (HTTP ${res.status})`);
+      return new SQL.Database(await bytesOf(res, url));
+    });
+    open.set(url, { db, users: 0 });
+  }
+  const entry = open.get(url);
+  entry.users += 1;
+  return entry.db;
+}
+function releaseDb(url) {
+  const entry = open.get(url);
+  entry.users -= 1;
+  if (entry.users === 0) {
+    open.delete(url);
+    entry.db.then((db) => db.close(), () => {});
+  }
+}
+
 // 요청: { name, url, obs?, series? } → 응답: { ok, name, table: { dates: [epoch ms], cols: { 칼럼: [값|null] } } }
 onmessage = async (e) => {
   const { name, url, obs, series } = e.data;
   try {
-    const [SQL, res] = await Promise.all([ready, fetch(url, { cache: 'no-cache' })]);
-    if (!res.ok) throw new Error(`${name}.db 를 받지 못했어요 (HTTP ${res.status})`);
-    const db = new SQL.Database(await bytesOf(res, url));
+    const db = await useDb(name, url);
     const table = obs ? long(db, obs, series) : wide(db);
-    db.close();
     postMessage({ ok: true, name, table });
   } catch (err) {
     postMessage({ ok: false, name, error: String(err.message || err) });
+  } finally {
+    releaseDb(url);
   }
 };
