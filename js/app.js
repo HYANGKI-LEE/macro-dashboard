@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261028p';
+const VERSION = '20261030a';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -28,6 +28,13 @@ const LONG_DB = {
   mfg_monthly: { url: `${FRED_REPO_DB}us_macro_PBA_manufacturing.db.gz`, obs: 'obs_monthly' },
   fin_daily: { url: `${FRED_REPO_DB}us_macro_MBF_financial_indicator.db.gz`, obs: 'obs_daily' },
   nyfed_quarterly: { url: `${FRED_REPO_DB}nyfed_household_credit.db.gz`, obs: 'obs_quarterly' },
+  // NIPA(BEA 국민계정) 하위 카테고리별 DB. 이름의 '_' 뒤가 주기여야 해서 <약어>_quarterly
+  gdp_quarterly: { url: `${FRED_REPO_DB}us_macro_NIPA_GDP_GNP.db.gz`, obs: 'obs_quarterly' },
+  pio_quarterly: { url: `${FRED_REPO_DB}us_macro_NIPA_Personal_Income_Outlays.db.gz`, obs: 'obs_quarterly' },
+  dca_quarterly: { url: `${FRED_REPO_DB}us_macro_NIPA_Domestic_Capital_Account.db.gz`, obs: 'obs_quarterly' },
+  exp_quarterly: { url: `${FRED_REPO_DB}us_macro_NIPA_Foreign_Transactions_Exports.db.gz`, obs: 'obs_quarterly' },
+  imp_quarterly: { url: `${FRED_REPO_DB}us_macro_NIPA_Foreign_Transactions_Imports.db.gz`, obs: 'obs_quarterly' },
+  gov_quarterly: { url: `${FRED_REPO_DB}us_macro_NIPA_Govt_Receipts_Expenditures.db.gz`, obs: 'obs_quarterly' },
 };
 const freqOf = (table) => table.split('_')[1];
 
@@ -125,6 +132,32 @@ const TABLE2 = [
 ];
 const SLOTS = 7; // css --slot-1 ~ --slot-7
 
+// BEA 국민계정(NIPA) 발표표. FRED release 53(GDP) 표 구조 그대로: [줄 번호, FRED 티커, DB, 항목명, 단계(0~3)]
+// 같은 26줄 구조라 항목명·단계는 공유하고 티커만 표마다 다르다.
+const NIPA_LINES = [
+  ['국내총생산 (GDP)', 0, 'gdp'], ['개인소비지출', 1, 'pio'], ['상품', 2, 'pio'], ['내구재', 3, 'pio'], ['비내구재', 3, 'pio'], ['서비스', 2, 'pio'],
+  ['민간총투자', 1, 'dca'], ['고정투자', 2, 'dca'], ['비주거', 3, 'dca'], ['구조물', 4, 'dca'], ['장비', 4, 'dca'], ['지식재산', 4, 'dca'], ['주거', 3, 'dca'],
+  ['재고 변동', 2, 'dca'], ['순수출', 1, 'exp'], ['수출', 2, 'exp'], ['상품', 3, 'exp'], ['서비스', 3, 'exp'], ['수입', 2, 'imp'], ['상품', 3, 'imp'], ['서비스', 3, 'imp'],
+  ['정부 소비·투자', 1, 'gov'], ['연방', 2, 'gov'], ['국방', 3, 'gov'], ['비국방', 3, 'gov'], ['주·지방', 2, 'gov'],
+];
+// 표마다 DB가 다른 줄: { 줄 번호: DB 약어 }
+const nipaRows = (tickers, dbOverride = {}) => tickers.map((t, i) => {
+  const [name, level, db] = NIPA_LINES[i];
+  return [i + 1, t, `${dbOverride[i + 1] || db}_quarterly`, name, level];
+});
+const NIPA_112 = nipaRows([
+  'A191RL1Q225SBEA', 'DPCERY2Q224SBEA', 'DGDSRY2Q224SBEA', 'DDURRY2Q224SBEA', 'DNDGRY2Q224SBEA', 'DSERRY2Q224SBEA',
+  'A006RY2Q224SBEA', 'A007RY2Q224SBEA', 'A008RY2Q224SBEA', 'A009RY2Q224SBEA', 'Y033RY2Q224SBEA', 'Y001RY2Q224SBEA', 'A011RY2Q224SBEA',
+  'A014RY2Q224SBEA', 'A019RY2Q224SBEA', 'A020RY2Q224SBEA', 'A253RY2Q224SBEA', 'A646RY2Q224SBEA', 'A021RY2Q224SBEA', 'A255RY2Q224SBEA', 'A656RY2Q224SBEA',
+  'A822RY2Q224SBEA', 'A823RY2Q224SBEA', 'A824RY2Q224SBEA', 'A825RY2Q224SBEA', 'A829RY2Q224SBEA',
+], { 11: 'gdp', 12: 'gdp' });
+const NIPA_115 = nipaRows([
+  'GDP', 'PCEC', 'DGDSRC1Q027SBEA', 'PCDG', 'PCND', 'PCESV',
+  'GPDI', 'FPI', 'PNFI', 'B009RC1Q027SBEA', 'Y033RC1Q027SBEA', 'Y001RC1Q027SBEA', 'PRFI',
+  'CBI', 'NETEXP', 'EXPGS', 'A253RC1Q027SBEA', 'A646RC1Q027SBEA', 'IMPGS', 'A255RC1Q027SBEA', 'B656RC1Q027SBEA',
+  'GCE', 'FGCE', 'FDEFX', 'FNDEFX', 'SLCE',
+], { 14: 'gdp' });
+
 // ===== 사이드바 묶음 · 페이지 · 차트 정의 =====
 // group: 사이드바 묶음. sub: 하위 탭이 있는 페이지에서 차트가 속한 탭. bar: 막대 차트. unit: 축/툴팁 단위.
 // wide: 그리드 한 줄 전체 폭으로 그림 (추이가 촘촘한 막대 차트 등).
@@ -211,10 +244,26 @@ const PAGES = {
   growth: {
     group: 'us',
     title: '성장',
-    desc: '인포맥스 분기 데이터 기준. 실질 GDP 성장률(전년동기비, %).',
+    desc: '주요국: 인포맥스 분기 데이터 기준 실질 GDP 성장률(전년동기비, %). 미국 GDP: BEA 국민계정 발표표(FRED release 53) — fred 리포 NIPA 항목 DB를 바로 읽어요.',
+    subtabs: [['main', '주요국'], ['us-gdp', '미국 GDP']],
+    defaultPeriod: 's2020',
+    // nipa: 발표표 블록 (rows = [줄, 티커, DB, 항목명, 단계]). 열은 기간 안의 분기, 최신이 왼쪽
+    nipa: [
+      { sub: 'us-gdp', id: 'nipa-112', title: 'Table 1.1.2. 실질 GDP 성장률 기여도', unit: '%p', digits: 2, rows: NIPA_112,
+        note: '전기 대비 연율(%). 1줄은 실질 GDP 성장률, 나머지는 성장률에 대한 기여도(%p)라 하위 항목을 더하면 위 항목이 돼요.' },
+      { sub: 'us-gdp', id: 'nipa-115', title: 'Table 1.1.5. 명목 GDP', unit: '십억 달러', digits: 1, rows: NIPA_115,
+        note: '계절조정 연율, 십억 달러. 소비 + 투자 + 순수출 + 정부 = GDP. 순수출 = 수출 − 수입.' },
+    ],
     charts: [
+      { sub: 'us-gdp', id: 'chart-gdp-contrib', title: '미국 실질 GDP 성장률 기여도 (Table 1.1.2)', table: 'gdp_quarterly', unit: '%', digits: 2, bar: true, stack: true, wide: true, defs: [
+        { color: '--slot-1', label: '개인소비', exact: 'DPCERY2Q224SBEA', table: 'pio_quarterly' },
+        { color: '--slot-2', label: '민간투자', exact: 'A006RY2Q224SBEA', table: 'dca_quarterly' },
+        { color: '--slot-3', label: '순수출', exact: 'A019RY2Q224SBEA', table: 'exp_quarterly' },
+        { color: '--slot-4', label: '정부', exact: 'A822RY2Q224SBEA', table: 'gov_quarterly' },
+        { color: '--base-rate', label: '실질 GDP 성장률', exact: 'A191RL1Q225SBEA', line: true },
+      ], note: '막대 = 항목별 기여도(%p), 선 = 실질 GDP 성장률(전기 대비 연율, %)' },
       // Main(분기) 'GDP 성장률' 차트와 같은 국가 구성
-      { id: 'chart-gdp', title: '주요국 GDP 성장률 추이', table: INFO_Q, unit: '%', defs: [
+      { sub: 'main', id: 'chart-gdp', title: '주요국 GDP 성장률 추이', table: INFO_Q, unit: '%', defs: [
         { key: 'kr', label: '한국', prefix: '한국:' },
         { key: 'us', label: '미국', prefix: '미국:' },
         { key: 'eu', label: 'EU', prefix: 'EU:' },
@@ -573,7 +622,7 @@ const PAGES = {
 
 // ===== 상태 =====
 // panel: 패널 id → { mode: 'mom'|'yoy', slots: Map(티커 → 색 번호) }
-const state = { data: {}, page: 'rates', sub: { rates: 'main', business: 'manufacturing', credit: 'leverage' }, period: {}, tenor: 10, legend: {}, ready: {}, panel: {} };
+const state = { data: {}, page: 'rates', sub: { rates: 'main', growth: 'main', business: 'manufacturing', credit: 'leverage' }, period: {}, tenor: 10, legend: {}, ready: {}, panel: {} };
 const charts = {};
 
 // ===== 유틸 =====
@@ -757,7 +806,7 @@ function chartOption(spec, built, period) {
       yAxisIndex: def.right ? 1 : 0,
       emphasis: { focus: 'series' },
     };
-    if (spec.bar || def.bar) return { ...base, type: 'bar', barMaxWidth: 12 };
+    if ((spec.bar || def.bar) && !def.line) return { ...base, type: 'bar', barMaxWidth: 12, stack: spec.stack ? 'total' : undefined };
     return {
       ...base,
       type: 'line',
@@ -948,11 +997,29 @@ function drawPanel(panel, page) {
   document.getElementById(`note-${panel.id}`).textContent = notes.join(' · ');
 }
 
+// ===== 발표표 (BEA NIPA 등): 행 = 표의 줄(위계), 열 = 기간 안의 분기 (최신이 왼쪽, FRED 표와 같은 순서) =====
+function drawNipa(spec, page) {
+  const period = state.period[page];
+  const rows = spec.rows.map((row) => {
+    const v = valuesOf(state.data[row[2]], { exact: row[1] });
+    return { row, at: new Map(v ? pointsInPeriod(v, period) : []) };
+  });
+  const quarters = [...new Set(rows.flatMap((r) => [...r.at.keys()]))].sort((a, b) => b - a);
+  const fmt = (v) => v.toLocaleString('ko-KR', { minimumFractionDigits: spec.digits, maximumFractionDigits: spec.digits });
+  const cell = (v) => (v === undefined ? '<td></td>' : `<td class="${v < 0 ? 'down' : ''}">${fmt(v)}</td>`);
+  document.getElementById(`table-${spec.id}`).innerHTML = `
+    <thead><tr><th class="line">줄</th><th class="name">항목 (${spec.unit})</th>${quarters.map((t) => `<th>${quarterLabel(t)}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(({ row: [line, t, , name, level], at }) => `<tr class="lv${level}"><td class="line">${line}</td><th class="name" title="${t}">${name}</th>${quarters.map((q) => cell(at.get(q))).join('')}</tr>`).join('')}</tbody>`;
+  const missing = rows.filter((r) => !r.at.size).map((r) => r.row[1]);
+  document.getElementById(`note-${spec.id}`).textContent = [spec.note, missing.length ? `${periodName(period)} 값 없음: ${missing.join(', ')}` : ''].filter(Boolean).join(' · ');
+}
+
 function renderPage(page) {
   const cfg = PAGES[page];
   const onSub = (c) => !cfg.subtabs || c.sub === state.sub[page];
   cfg.charts.filter(onSub).forEach(drawChart);
   (cfg.panels || []).filter(onSub).forEach((p) => drawPanel(p, page));
+  (cfg.nipa || []).filter(onSub).forEach((n) => drawNipa(n, page));
 }
 
 // ===== 화면 만들기 =====
@@ -989,9 +1056,15 @@ function buildPages() {
         <div class="table-wrap"><table class="ind-table" id="table-${p.id}"></table></div>
       </div>`;
     const panels = (s) => (cfg.panels || []).filter((p) => !s || p.sub === s).map(panel).join('');
+    const nipa = (s) => (cfg.nipa || []).filter((n) => !s || n.sub === s).map((n) => `
+      <div class="panel">
+        <h2>${n.title}</h2>
+        <p class="note" id="note-${n.id}"></p>
+        <div class="table-wrap"><table class="ind-table nipa-table" id="table-${n.id}"></table></div>
+      </div>`).join('');
     const body = cfg.subtabs
-      ? cfg.subtabs.map(([s]) => `<div class="subpage" data-subpage="${id}/${s}">${grid(cfg.charts.filter((c) => c.sub === s))}${panels(s)}</div>`).join('')
-      : grid(cfg.charts) + panels();
+      ? cfg.subtabs.map(([s]) => `<div class="subpage" data-subpage="${id}/${s}">${grid(cfg.charts.filter((c) => c.sub === s))}${panels(s)}${nipa(s)}</div>`).join('')
+      : grid(cfg.charts) + panels() + nipa();
     const groupLabel = GROUPS.find(([g]) => g === cfg.group)[1];
 
     main.insertAdjacentHTML('beforeend', `
@@ -1047,7 +1120,8 @@ function loadTable(name) {
 // 페이지에 필요한 DB 이름 (시장금리는 모든 만기)
 function tablesOf(page) {
   const fromCharts = PAGES[page].charts.flatMap((spec) => allDefs(spec).flatMap((def) => (def.calc ? def.calc.inputs.map((i) => i.table) : [tableOf(spec, def)])));
-  return [...new Set([...fromCharts, ...(PAGES[page].panels || []).map((p) => p.table)])];
+  const fromNipa = (PAGES[page].nipa || []).flatMap((n) => n.rows.map((r) => r[2]));
+  return [...new Set([...fromCharts, ...(PAGES[page].panels || []).map((p) => p.table), ...fromNipa])];
 }
 
 // 세로형 DB(LONG_DB)에서 꺼낼 티커: 모든 페이지의 차트·패널 설정에서 그 DB를 쓰는 티커를 모은다
@@ -1061,6 +1135,7 @@ function seriesFor(table) {
       }
     }
     (cfg.panels || []).filter((p) => p.table === table).forEach((p) => p.rows.forEach(([t]) => out.add(t)));
+    (cfg.nipa || []).forEach((n) => n.rows.filter((r) => r[2] === table).forEach((r) => out.add(r[1])));
   }
   return [...out];
 }

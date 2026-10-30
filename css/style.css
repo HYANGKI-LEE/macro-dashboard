@@ -144,6 +144,15 @@ p.note { margin: 0 0 4px; min-height: 1em; color: var(--text-muted); font-size: 
 .ind-table tr.on .chip { border-color: transparent; }
 .ind-table td.up { color: var(--up); }
 .ind-table td.down { color: var(--down); }
+/* 발표표 (BEA NIPA): 클릭 없음, 줄 번호 열, 위계 들여쓰기 4단계 */
+.nipa-table tbody tr { cursor: default; }
+.nipa-table .line { color: var(--text-muted); text-align: right; min-width: 36px; }
+.nipa-table .name { left: 0; }
+.nipa-table tr.lv0 th, .nipa-table tr.lv0 td { background: var(--accent-soft); font-weight: 700; }
+.nipa-table tr.lv1 .name { padding-left: 20px; font-weight: 600; }
+.nipa-table tr.lv2 .name { padding-left: 36px; color: var(--text-primary); }
+.nipa-table tr.lv3 .name { padding-left: 52px; color: var(--text-secondary); }
+.nipa-table tr.lv4 .name { padding-left: 68px; color: var(--text-secondary); }
 
 .loading {
   position: absolute; inset: 0;
