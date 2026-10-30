@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261030o';
+const VERSION = '20261030p';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -855,23 +855,29 @@ const PAGES = {
     title: '대차대조표',
     desc: '연준 Financial Accounts(Z.1) 기준 — fred 리포 Z.1 DB를 바로 읽어요. 분기 말 잔액, 계절조정 없음.',
     subtabs: [['hh', '가계 및 비영리기관'], ['nfc', '비금융기업']],
+    cols: 3,
     defaultPeriod: 's2020',
     nipa: [
       { sub: 'hh', id: 'nipa-s1mb', title: '가계·비영리단체 대차대조표', unit: '십억 달러', digits: 1, rows: Z1_S1MB, modes: true,
-        src: 'https://fred.stlouisfed.org/release/tables?rid=52&eid=1256192', scale: 0.001, noScale: new Set([52, 54]), noPct: new Set([52, 54]), sep: [43], memoFrom: 43,
+        src: 'https://www.federalreserve.gov/releases/z1/current/html/S1M_b.htm', scale: 0.001, noScale: new Set([52, 54]), noPct: new Set([52, 54]), sep: [43], memoFrom: 43,
         note: '분기 말 잔액(FRED 백만 달러 → 십억 달러). 자산 − 부채 = 순자산. 43줄부터는 참고 항목이에요. ▸ 줄을 누르면 세부 항목이 펼쳐져요.' },
       { sub: 'nfc', id: 'nipa-s111b', title: '비금융기업 대차대조표', unit: '십억 달러', digits: 1, rows: Z1_S111B, modes: true,
-        src: 'https://fred.stlouisfed.org/release/tables?rid=52&eid=1256247', scale: 0.001, noScale: new Set([48, 49, 50]), noPct: new Set([19, 27, 48, 49, 50]), sep: [47], memoFrom: 47,
+        src: 'https://www.federalreserve.gov/releases/z1/current/html/S11_1_b.htm', scale: 0.001, noScale: new Set([48, 49, 50]), noPct: new Set([19, 27, 48, 49, 50]), sep: [47], memoFrom: 47,
         note: '분기 말 잔액(FRED 백만 달러 → 십억 달러). 부채 + 자본(시가) = 부채와 자본 합계, 순자산 = 자산 − 부채. 47줄부터는 참고 항목(비율·취득원가 기준)이에요. 음수·0이 될 수 있는 줄은 증가율을 비워 둬요.' },
     ],
     charts: [
-      { sub: 'hh', id: 'chart-hhbs', title: '가계 자산·부채·순자산', table: 'z1hh_quarterly', unit: '조 달러', digits: 1, defs: [
-        { color: '--slot-1', label: '자산', exact: 'TABSHNO', scale: 1e-6 },
-        { color: '--slot-3', label: '부채', exact: 'TLBSHNO', scale: 1e-6 },
-        { color: '--base-rate', label: '순자산', exact: 'TNWBSHNO', scale: 1e-6 },
-        { color: '--slot-2', label: '가처분소득 대비 순자산(우, %)', exact: 'HNONWPDPI', right: true },
-      ], note: '분기 말 잔액(조 달러). 가처분소득 대비 순자산은 오른쪽 축(%).' },
-      { sub: 'nfc', id: 'chart-nfcbs', title: '비금융기업 자산·부채·순자산', table: 'z1nfc_quarterly', unit: '조 달러', digits: 1, defs: [
+      { sub: 'hh', id: 'chart-hh-nwdpi', title: '가처분소득 대비 순자산', table: 'z1hh_quarterly', unit: '%', digits: 1, defs: [
+        { color: '--slot-1', label: '순자산/가처분소득', exact: 'HNONWPDPI' },
+      ], note: '순자산 ÷ 가처분소득(연율) × 100' },
+      { sub: 'hh', id: 'chart-hh-lev', title: '레버리지 (총부채/총자산)', table: 'z1hh_quarterly', unit: '%', digits: 1, defs: [
+        { color: '--slot-1', label: '총부채/총자산', exact: 'TLBSHNO', div: 'TABSHNO', scale: 100 },
+      ], note: '총부채 ÷ 총자산 × 100' },
+      { sub: 'hh', id: 'chart-hh-mix', heading: '자산', title: '총자산 중 부동산·주식·연금 비중', table: 'z1hh_quarterly', unit: '%', digits: 1, defs: [
+        { color: '--slot-1', label: '부동산', exact: 'HNOREMV', div: 'TABSHNO', scale: 100 },
+        { color: '--slot-2', label: '주식', exact: 'HNOCEA', div: 'TABSHNO', scale: 100 },
+        { color: '--slot-3', label: '연금 수급권', exact: 'HNOPFAQ027S', div: 'TABSHNO', scale: 100 },
+      ], note: '각 항목 ÷ 총자산 × 100. 주식은 직접 보유분(펀드·연금 통한 간접 보유 제외)' },
+      { sub: 'nfc', id: 'chart-nfcbs', title: '비금융기업 자산·부채·순자산', table: 'z1nfc_quarterly', unit: '조 달러', digits: 1, wide: true, defs: [
         { color: '--slot-1', label: '자산', exact: 'TABSNNCB', scale: 1e-6 },
         { color: '--slot-3', label: '부채', exact: 'TLBSNNCB', scale: 1e-6 },
         { color: '--base-rate', label: '순자산', exact: 'TNWMVBSNNCB', scale: 1e-6 },
@@ -1452,7 +1458,7 @@ function buildPages() {
   });
 
   // src: 원표 링크 (FRED 발표표 등)
-  const src = (c) => (c.src ? `<p class="note src"><a href="${c.src}" target="_blank" rel="noopener">FRED 원표 보기 ↗</a></p>` : '');
+  const src = (c) => (c.src ? `<p class="note src"><a href="${c.src}" target="_blank" rel="noopener">${c.src.includes('federalreserve.gov') ? '연준' : 'FRED'} 원표 보기 ↗</a></p>` : '');
   for (const [id, cfg] of Object.entries(PAGES)) {
     // 만기 버튼이 있는 차트 옆 칸에는 같은 높이의 빈 줄을 넣어 차트 위치를 맞춘다.
     const cell = (c, list) => `
