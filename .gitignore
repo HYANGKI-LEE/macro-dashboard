@@ -15,3 +15,7 @@ scripts/autopush.log
 data/*.db.tmp
 __pycache__/
 scripts/fred/build_fred_db.log
+
+# 인포맥스 엑셀·DB (더 이상 쓰지 않음, 로컬에만 둠)
+data/Macro.xlsx
+data/infomax_*.db

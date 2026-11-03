@@ -1,17 +1,13 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261030q';
+const VERSION = '20261103a';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
 //   fred_*    : FRED (scripts/fred/build_fred_db.py) — 칼럼 = FRED 티커
-//   infomax_* : 인포맥스 (data/Macro.xlsx → scripts/excel/build_infomax_db.py) — 칼럼 = Info 시트 2행 지표명
 const FRED_D = 'fred_daily';
 const FRED_W = 'fred_weekly';
 const FRED_M = 'fred_monthly';
 const FRED_Q = 'fred_quarterly';
-const INFO_D = 'infomax_daily';
-const INFO_M = 'infomax_monthly';
-const INFO_Q = 'infomax_quarterly';
 //   mfg_*     : FRED 항목별 DB (HYANGKI-LEE/fred 의 build_db.py → output/db/*.db). 복사하지 않고 public 리포에서 바로 읽음
 //               세로형(series_id, date, value)이라 LONG_DB 로 주소·테이블을 지정. 칼럼 = FRED 티커
 //               DB는 fred 리포의 data 브랜치에 있음 (평일 07:00 KST GitHub Actions가 갱신, 이력 없이 덮어씀)
@@ -58,35 +54,6 @@ const freqOf = (table) => table.split('_')[1];
 // indexTo: 'YYYY-MM-DD' 그 날짜 값을 100으로 한 지수.
 // minus: 같은 DB의 다른 칼럼을 같은 가공(transform 등)을 거쳐 뺌 (예: 수주 YoY − 재고 YoY 갭, %p).
 // 차트 compare: { base: 'YYYY-MM-DD' } → 시리즈(defs)를 항목으로, 기준 분기와 최근 분기 값을 막대로 비교.
-const POLICY = [
-  { key: 'kr', label: '한국', prefix: '한국:기준금리' },
-  { key: 'us', label: '미국(상단)', prefix: '미국:기준금리 상단' },
-  { key: 'eu', label: '유로존', prefix: '유로존:ECB정책금리' },
-  { key: 'jp', label: '일본', prefix: '일본:기준금리' },
-  { key: 'uk', label: '영국', prefix: '영국:기준금리' },
-  { key: 'au', label: '호주', prefix: '호주:기준금리' },
-  { key: 'ca', label: '캐나다', prefix: '캐나다:기준금리' },
-  { other: true, hidden: true, dash: 'dashed', label: '멕시코', prefix: '멕시코:기준금리' },
-  { other: true, hidden: true, dash: 'dotted', label: '대만', prefix: '대만:기준금리' },
-  { other: true, hidden: true, dash: [8, 3, 2, 3], label: '인도', prefix: '인도:기준금리' },
-  { other: true, hidden: true, dash: [2, 6], label: '뉴질랜드', prefix: '뉴질랜드:기준금리' },
-];
-
-const TENORS = [2, 5, 10, 20, 30];
-const MARKET = (t) => [
-  { key: 'kr', label: '한국', exact: `금투협 최종호가 국고채권(${t}년)` },
-  { key: 'us', label: '미국', exact: `미국(종합) ${t}년` },
-  { key: 'eu', label: '유럽연합', exact: `유럽연합 ${t}년` },
-  { key: 'jp', label: '일본', exact: `일본 ${t}년` },
-  { key: 'cn', label: '중국', exact: `중국 ${t}년` },
-  { key: 'uk', label: '영국', exact: `영국 ${t}년` },
-  { key: 'au', label: '호주', exact: `호주 ${t}년` },
-  { other: true, hidden: true, dash: 'dashed', label: '프랑스', exact: `프랑스 ${t}년` },
-  { other: true, hidden: true, dash: 'dotted', label: '이탈리아', exact: `이탈리아 ${t}년` },
-  { other: true, hidden: true, dash: [8, 3, 2, 3], label: '스페인', exact: `스페인 ${t}년` },
-  { other: true, hidden: true, dash: [2, 6], label: '대만', exact: `대만 ${t}년` },
-];
-
 const BASE = { color: '--base-rate', step: true };
 // 미국 기준금리: 08.12.16 이전은 단일 목표치(DFEDTAR), 이후는 목표 범위 상단(DFEDTARU)
 const FED_UPPER = { ...BASE, label: '기준금리(상단)', table: FRED_D, splice: ['DFEDTAR', 'DFEDTARU'] };
@@ -705,30 +672,9 @@ const FRED_TABLE = (eid) => `https://fred.stlouisfed.org/release/tables?rid=53&e
 const GROUPS = [['us', '미국']];
 // 사이드바 순서 (Bloomberg ECST 분류 기준). 하위 페이지(parent)는 상위 바로 뒤에. 여기 없는 페이지는 그 뒤에 정의 순서대로
 const NAV_ORDER = ['growth', 'gdp', 'flow', 'inflation', 'labor', 'industry', 'business', 'household', 'housing',
-  'trade', 'fiscal', 'money', 'banks', 'finance', 'credit', 'rates'];
+  'trade', 'fiscal', 'money', 'banks', 'finance', 'credit'];
 
 const PAGES = {
-  rates: {
-    group: 'us',
-    title: '금리',
-    desc: '미국 기준금리는 FRED, 나머지는 인포맥스 일별 데이터 기준. 범례를 클릭하면 선을 켜고 끌 수 있어요.',
-    subtabs: [['main', 'Main'], ['global', '글로벌']],
-    charts: [
-      { sub: 'main', id: 'chart-kr', title: '한국 기준금리 · 국고채 3년 · 10년', table: INFO_D, unit: '%', defs: [
-        { ...BASE, label: '기준금리', prefix: '한국:기준금리' },
-        { color: '--slot-2', label: '국고채 3년', exact: '금투협 최종호가 국고채권(3년)' },
-        { color: '--slot-3', label: '국고채 10년', exact: '금투협 최종호가 국고채권(10년)' },
-      ] },
-      { sub: 'main', id: 'chart-us', title: '미국 기준금리 · 국채 2년 · 10년', table: INFO_D, unit: '%', defs: [
-        FED_UPPER,
-        { color: '--slot-2', label: '국채 2년', exact: '미국(종합) 2년' },
-        { color: '--slot-3', label: '국채 10년', exact: '미국(종합) 10년' },
-      ] },
-      { sub: 'global', id: 'chart-policy', title: '주요국 기준금리 추이', table: INFO_D, unit: '%', step: true, defs: POLICY,
-        note: '회색 점선 국가는 기본 숨김. 범례를 클릭하면 보여요.' },
-      { sub: 'global', id: 'chart-market', title: '주요국 시장금리 추이', table: INFO_D, unit: '%', defs: () => MARKET(state.tenor), tenors: true },
-    ],
-  },
   inflation: {
     group: 'us',
     title: '물가',
@@ -768,32 +714,9 @@ const PAGES = {
       { id: 'chart-newhome', title: '미국 신규주택판매', table: FRED_M, unit: '천 호', digits: 0, defs: [
         { color: '--slot-1', label: '신규주택판매', exact: 'HSN1F' },
       ] },
-      // FRED 기존주택판매(EXHOSLUSM495S)는 NAR 라이선스로 최근 13개월만 제공돼 인포맥스 값을 쓴다
-      { id: 'chart-existing', title: '미국 기존주택판매', table: INFO_M, unit: '백만 호', digits: 2, defs: [
-        { color: '--slot-1', label: '기존주택판매', prefix: '미국:기존주택판매', since: 1999 },
-      ], note: '1998년 이전 값은 단위가 달라 제외했어요.' },
     ],
   },
-  growth: {
-    group: 'us',
-    title: '국민계정(GDP)',
-    desc: '인포맥스 분기 데이터 기준 실질 GDP 성장률(전년동기비, %).',
-    defaultPeriod: 's2020',
-    charts: [
-      // Main(분기) 'GDP 성장률' 차트와 같은 국가 구성
-      { id: 'chart-gdp', title: '주요국 GDP 성장률 추이', table: INFO_Q, unit: '%', defs: [
-        { key: 'kr', label: '한국', prefix: '한국:' },
-        { key: 'us', label: '미국', prefix: '미국:' },
-        { key: 'eu', label: 'EU', prefix: 'EU:' },
-        { key: 'jp', label: '일본', prefix: '일본:' },
-        { key: 'cn', label: '중국', prefix: '중국:' },
-        { key: 'uk', label: '영국', prefix: '영국:' },
-        { key: 'au', label: '호주', prefix: '호주:' },
-        { other: true, dash: 'solid', label: '독일', prefix: '독일:' },
-        { other: true, dash: 'dashed', label: '프랑스', prefix: '프랑스:' },
-      ] },
-    ],
-  },
+  growth: { group: 'us', title: '국민계정(GDP)', charts: [] },
   // parent: 사이드바에서 이 페이지 아래에 들여써서 보여줌
   gdp: {
     group: 'us',
@@ -1276,7 +1199,7 @@ const PAGES = {
 // ===== 상태 =====
 // panel: 패널 id → { mode: 'mom'|'yoy', slots: Map(티커 → 색 번호) }
 // nipa: 발표표 id → { mode: 'yoy'|'qoqa'|'raw', collapsed: Set(접은 줄 번호) }
-const state = { data: {}, page: NAV_ORDER[0], sub: { rates: 'main', gdp: 'chg', flow: 'hh', banks: 'w', credit: 'leverage' }, period: {}, tenor: 10, legend: {}, ready: {}, panel: {}, nipa: {} };
+const state = { data: {}, page: NAV_ORDER[0], sub: { gdp: 'chg', flow: 'hh', banks: 'w', credit: 'leverage' }, period: {}, legend: {}, ready: {}, panel: {}, nipa: {} };
 const charts = {};
 
 // ===== 유틸 =====
@@ -1589,7 +1512,7 @@ function drawChart(spec) {
   const empty = built.series.filter((s) => !s.data.length).map((s) => s.def.label);
   const notes = [];
   if (spec.note) notes.push(spec.note);
-  if (built.missing.length) notes.push(`${spec.tenors ? `${state.tenor}년물 ` : ''}데이터 없음: ${built.missing.join(', ')}`);
+  if (built.missing.length) notes.push(`데이터 없음: ${built.missing.join(', ')}`);
   if (empty.length) notes.push(`${periodName(period)} 값 없음: ${empty.join(', ')}`);
   document.getElementById(`note-${spec.id}`).textContent = notes.join(' · ');
 }
@@ -1779,18 +1702,15 @@ function buildPages() {
   // src: 원표 링크 (FRED 발표표 등)
   const src = (c) => (c.src ? `<p class="note src"><a href="${c.src}" target="_blank" rel="noopener">${c.src.includes('federalreserve.gov') ? '연준' : 'FRED'} 원표 보기 ↗</a></p>` : '');
   for (const [id, cfg] of Object.entries(PAGES)) {
-    // 만기 버튼이 있는 차트 옆 칸에는 같은 높이의 빈 줄을 넣어 차트 위치를 맞춘다.
-    const cell = (c, list) => `
+    const cell = (c) => `
       <div${c.wide ? ' class="wide"' : ''}>
         <h2>${c.title}</h2>
-        ${c.tenors ? '<div class="filters"><span class="label">만기</span><div class="seg" id="tenors"></div></div>'
-          : list.some((x) => x.tenors) ? '<div class="filters filters-spacer"></div>' : ''}
         <p class="note" id="note-${c.id}"></p>
         ${src(c)}
         <div class="chart" id="${c.id}"></div>
       </div>`;
     const heading = (c) => (c.heading ? `<div class="grid-heading"><h3>${c.heading}</h3></div>` : '');
-    const grid = (list) => `<div class="chart-grid${cfg.cols === 3 ? ' cols-3' : ''}">${list.map((c) => heading(c) + cell(c, list)).join('')}</div>`;
+    const grid = (list) => `<div class="chart-grid${cfg.cols === 3 ? ' cols-3' : ''}">${list.map((c) => heading(c) + cell(c)).join('')}</div>`;
     const panel = (p) => `
       <div class="panel">
         <h2>${p.title}</h2>
@@ -1826,7 +1746,7 @@ function buildPages() {
   }
 }
 
-// 주소 형식: #페이지 또는 #페이지/하위탭 (예: #rates/global)
+// 주소 형식: #페이지 또는 #페이지/하위탭 (예: #gdp/core)
 function showPage(hash) {
   let [page, sub] = hash.split('/');
   if (page === 'growth' && sub === 'us-gdp') [page, sub] = ['gdp', 'chg'];
@@ -1938,7 +1858,7 @@ function buttons(container, groups, currentKey, onPick) {
 }
 
 // 페이지의 모든 차트 정의 (시장금리는 모든 만기)
-function allDefs(spec) { return spec.tenors ? TENORS.flatMap(MARKET) : defsOf(spec); }
+function allDefs(spec) { return defsOf(spec); }
 
 // 페이지 차트의 시리즈마다 콜백 (가공된 값 기준)
 function eachSeries(page, fn) {
@@ -2049,10 +1969,6 @@ function setupFilters(page) {
   (PAGES[page].nipa || []).filter((n) => n.modes).forEach((n) => {
     buttons(document.querySelector(`[data-nipa-mode="${n.id}"]`), [NIPA_MODES], nipaState(n).mode, (m) => { nipaState(n).mode = m.key; drawNipa(n, page); });
   });
-  if (PAGES[page].charts.some((c) => c.tenors)) {
-    const tenors = TENORS.map((t) => ({ key: t, label: `${t}Y` }));
-    buttons(document.getElementById('tenors'), [tenors], state.tenor, (t) => { state.tenor = t.key; renderPage(page); });
-  }
 }
 
 // ===== 시작 =====

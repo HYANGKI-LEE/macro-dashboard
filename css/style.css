@@ -103,7 +103,6 @@ h2 { font-size: 16px; margin: 32px 0 8px; }
 .chart-grid > .grid-heading:first-child { margin-top: 8px; }
 .chart-grid > .grid-heading h3 { margin: 0; font-size: 15px; color: var(--accent); }
 /* 옆 칸의 만기 버튼 줄만큼 높이를 맞춰 두 차트의 위치를 정렬 */
-.filters-spacer { min-height: 27px; }
 p.note { margin: 0 0 4px; min-height: 1em; color: var(--text-muted); font-size: 12px; }
 
 .filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 8px 0; }
@@ -183,7 +182,6 @@ p.note { margin: 0 0 4px; min-height: 1em; color: var(--text-muted); font-size: 
   main { padding: 16px 16px 40px; }
   .chart, .chart-grid .chart { height: 360px; }
   .chart-grid, .chart-grid.cols-3 { grid-template-columns: 1fr; }
-  .filters-spacer { display: none; }
 }
 /* 발표표 접기: 하위 항목이 있는 줄을 클릭하면 접고 편다 */
 .nipa-table tbody tr.parent { cursor: pointer; }
