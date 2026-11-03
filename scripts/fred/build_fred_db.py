@@ -10,7 +10,7 @@
   매일 바뀌는 건 일별 DB뿐이라 git에 다시 올라가는 양도 줄어든다.
 - 티커 목록은 mySeriesIds/us_macro.py (HYANGKI-LEE/fred 에서 복사)와 dashboard_extra.py 의 ids_* 리스트 전체. 중복 티커는 한 칼럼.
 - 증분 업데이트: FRED 값이 있는 칸만 덮어쓴다(수정치 반영). 없는 날짜는 행을 추가한다.
-- us_macro.py에서 빠진 티커는 --drop-missing 을 줄 때만 DB에서 삭제한다.
+- us_macro.py에서 빠진 티커는 --drop-missing 을 줄 때만 DB에서 삭제한다. ISM_* 칼럼(scripts/excel/build_ism_db.py)은 지우지 않는다.
 - 실패한 티커는 건너뛰고 마지막에 목록을 출력한다(기존 DB 값은 유지).
 
 사용: python build_fred_db.py [--only GDP,UNRATE] [--drop-missing]
@@ -164,7 +164,7 @@ def main():
     if a.drop_missing and not a.only:
         keep = {t[0] for t in tickers}
         for db in dbs.values():
-            for c in sorted(db.cols - keep):
+            for c in sorted(c for c in db.cols - keep if not c.startswith('ISM_')):  # ISM_* = build_ism_db.py가 넣은 칼럼
                 db.drop(c)
 
     print()

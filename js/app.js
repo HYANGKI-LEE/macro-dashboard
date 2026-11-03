@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261103a';
+const VERSION = '20261103b';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -671,7 +671,7 @@ const FRED_TABLE = (eid) => `https://fred.stlouisfed.org/release/tables?rid=53&e
 // heading: 이 차트 앞에 소제목 줄을 넣고 새 줄부터 시작 (예: '연체잔액비중 : 상품별').
 const GROUPS = [['us', '미국']];
 // 사이드바 순서 (Bloomberg ECST 분류 기준). 하위 페이지(parent)는 상위 바로 뒤에. 여기 없는 페이지는 그 뒤에 정의 순서대로
-const NAV_ORDER = ['growth', 'gdp', 'flow', 'inflation', 'labor', 'industry', 'business', 'household', 'housing',
+const NAV_ORDER = ['growth', 'gdp', 'flow', 'inflation', 'labor', 'industry', 'business', 'ism', 'household', 'housing',
   'trade', 'fiscal', 'money', 'banks', 'finance', 'credit'];
 
 const PAGES = {
@@ -1121,6 +1121,30 @@ const PAGES = {
     charts: [],
   },
   finance: { group: 'us', title: '금융지표', charts: [] },
+  // ISM: 인포맥스 엑셀 → scripts/excel/build_ism_db.py → data/ism.db, fred_monthly.db 에 ISM_* 칼럼으로 병합
+  ism: {
+    group: 'us',
+    parent: 'industry',
+    title: 'ISM 지수',
+    desc: 'ISM 제조업·서비스업 PMI (월별, 계절조정). 50보다 높으면 확장, 낮으면 위축.',
+    defaultPeriod: 's2020',
+    charts: [
+      { id: 'chart-ism-mfg', title: 'ISM 제조업 PMI', table: FRED_M, unit: 'pt', digits: 1, wide: true, ref: 50, defs: [
+        { color: '--base-rate', label: '제조업 PMI', exact: 'ISM_MFG_PMI' },
+        { other: true, hidden: true, dash: 'dashed', label: '신규주문', exact: 'ISM_MFG_NEWORD' },
+        { other: true, hidden: true, dash: 'dotted', label: '생산', exact: 'ISM_MFG_PROD' },
+        { other: true, hidden: true, dash: [8, 3, 2, 3], label: '고용', exact: 'ISM_MFG_EMP' },
+        { other: true, hidden: true, dash: [2, 6], label: '가격', exact: 'ISM_MFG_PRICES' },
+      ], note: '점선 = 50(확장·위축 기준). 세부지수는 범례를 누르면 보여요' },
+      { id: 'chart-ism-svc', title: 'ISM 서비스업 PMI', table: FRED_M, unit: 'pt', digits: 1, wide: true, ref: 50, defs: [
+        { color: '--base-rate', label: '서비스업 PMI', exact: 'ISM_SVC_PMI' },
+        { other: true, hidden: true, dash: 'dashed', label: '신규주문', exact: 'ISM_SVC_NEWORD' },
+        { other: true, hidden: true, dash: 'dotted', label: '기업활동', exact: 'ISM_SVC_BUSACT' },
+        { other: true, hidden: true, dash: [8, 3, 2, 3], label: '고용', exact: 'ISM_SVC_EMP' },
+        { other: true, hidden: true, dash: [2, 6], label: '가격', exact: 'ISM_SVC_PRICES' },
+      ], note: '서비스업 PMI = 기업활동·신규주문·고용·공급업체 납품 4개 지수 평균(ISM 방식, 2008년부터). 점선 = 50' },
+    ],
+  },
   business: {
     group: 'us',
     parent: 'industry',
@@ -1402,6 +1426,11 @@ function chartOption(spec, built, period) {
       lineStyle: { width: 2, type: def.dash || 'solid' },
     };
   });
+
+  // ref: 기준선 (예: PMI 50)
+  if (spec.ref != null && series[0]) {
+    series[0].markLine = { silent: true, symbol: 'none', label: { show: false }, lineStyle: { color: muted, type: 'dashed', width: 1 }, data: [{ yAxis: spec.ref }] };
+  }
 
   const head = (v) => (byQuarter ? `${period.year}.${v}` : quarterly ? quarterLabel(v) : freq === 'monthly' ? ym(v) : ymd(v));
 
