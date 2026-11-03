@@ -6,8 +6,6 @@
 - 엑셀은 git에 올리지 않고 로컬에만 둔다. 엑셀을 새로 받은 뒤 이 스크립트를 돌리고 두 DB를 커밋하면 된다.
 - 인포맥스는 시리즈가 시작하기 전 기간을 다른 칼럼 값으로 채워 보낸다(예: 서비스업 세부지수 1997.6 이전 = 제조업 가격지수).
   그래서 START 이전 값은 버린다.
-- 서비스업 PMI 헤드라인은 엑셀에 없어(비제조업 PMI 칼럼은 2009.3에서 끊김) ISM 방식대로 계산한다:
-  기업활동·신규주문·고용·공급업체 납품 4개 지수의 단순평균. ISM이 이 합성지수를 내기 시작한 2008.1부터.
 
 사용: python scripts/excel/build_ism_db.py
 """
@@ -36,6 +34,7 @@ COLS = {
     10: ('ISM_MFG_BACKLOG', 'ISM Manufacturing: Backlog of Orders', '1993-01'),
     11: ('ISM_MFG_IMPORTS', 'ISM Manufacturing: Imports', '1989-10'),
     12: ('ISM_MFG_EXPORTS', 'ISM Manufacturing: New Export Orders', '1988-01'),
+    13: ('ISM_SVC_PMI', 'ISM Services PMI', '1997-07'),
     14: ('ISM_SVC_NEWORD', 'ISM Services: New Orders', '1997-07'),
     15: ('ISM_SVC_BUSACT', 'ISM Services: Business Activity', '1997-07'),
     16: ('ISM_SVC_EMP', 'ISM Services: Employment', '1997-07'),
@@ -47,8 +46,6 @@ COLS = {
     22: ('ISM_SVC_IMPORTS', 'ISM Services: Imports', '1997-07'),
     23: ('ISM_SVC_EXPORTS', 'ISM Services: New Export Orders', '1997-07'),
 }
-SVC_PMI = ('ISM_SVC_PMI', 'ISM Services PMI', '2008-01')
-SVC_PARTS = ['ISM_SVC_BUSACT', 'ISM_SVC_NEWORD', 'ISM_SVC_EMP', 'ISM_SVC_DELIV']
 
 
 def read_excel():
@@ -62,9 +59,6 @@ def read_excel():
         for j, (name, _, start) in COLS.items():
             if isinstance(r[j], (int, float)) and (start is None or ym >= start):
                 data[name][f'{ym}-01'] = float(r[j])
-    parts = [data[p] for p in SVC_PARTS]
-    data[SVC_PMI[0]] = {d: round(sum(p[d] for p in parts) / 4, 2) for d in parts[0]
-                        if d >= f'{SVC_PMI[2]}-01' and all(d in p for p in parts)}
     return data
 
 
@@ -89,7 +83,7 @@ def write(path, data, meta_rows):
 
 def main():
     data = read_excel()
-    names = {name: (title, start) for name, title, start in [*COLS.values(), SVC_PMI]}
+    names = {name: (title, start) for name, title, start in COLS.values()}
     meta_rows = []
     for i, name in enumerate(data, 1):
         title, _ = names[name]

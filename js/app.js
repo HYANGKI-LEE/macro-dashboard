@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261103b';
+const VERSION = '20261103c';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -1142,7 +1142,7 @@ const PAGES = {
         { other: true, hidden: true, dash: 'dotted', label: '기업활동', exact: 'ISM_SVC_BUSACT' },
         { other: true, hidden: true, dash: [8, 3, 2, 3], label: '고용', exact: 'ISM_SVC_EMP' },
         { other: true, hidden: true, dash: [2, 6], label: '가격', exact: 'ISM_SVC_PRICES' },
-      ], note: '서비스업 PMI = 기업활동·신규주문·고용·공급업체 납품 4개 지수 평균(ISM 방식, 2008년부터). 점선 = 50' },
+      ], note: '점선 = 50(확장·위축 기준). 세부지수는 범례를 누르면 보여요' },
     ],
   },
   business: {
