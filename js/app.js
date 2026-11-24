@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261103c';
+const VERSION = '20261124a';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -52,6 +52,7 @@ const freqOf = (table) => table.split('_')[1];
 // calc: 여러 칼럼을 분기 단위로 맞춰 계산 { inputs: [Q(칼럼, DB, 'last'|'mean')], fn: (a, b, ...) => 값 },
 // shiftYears: 날짜를 N년 뒤로 옮김(선행 지표), right: 오른쪽 축(차트의 unit2),
 // indexTo: 'YYYY-MM-DD' 그 날짜 값을 100으로 한 지수.
+// zscore: 'YYYY-MM-DD' 그 날짜 이후 평균·표준편차로 표준화(z-score). zavg: [칼럼...] 각 칼럼 z-score의 평균(모두 있는 달만).
 // minus: 같은 DB의 다른 칼럼을 같은 가공(transform 등)을 거쳐 뺌 (예: 수주 YoY − 재고 YoY 갭, %p).
 // 차트 compare: { base: 'YYYY-MM-DD' } → 시리즈(defs)를 항목으로, 기준 분기와 최근 분기 값을 막대로 비교.
 const BASE = { color: '--base-rate', step: true };
@@ -671,6 +672,9 @@ const FRED_TABLE = (eid) => `https://fred.stlouisfed.org/release/tables?rid=53&e
 // heading: 이 차트 앞에 소제목 줄을 넣고 새 줄부터 시작 (예: '연체잔액비중 : 상품별').
 const GROUPS = [['us', '미국']];
 // 사이드바 순서 (Bloomberg ECST 분류 기준). 하위 페이지(parent)는 상위 바로 뒤에. 여기 없는 페이지는 그 뒤에 정의 순서대로
+// 지역 연은 제조업 서베이 현재 일반경기 (뉴욕·필라델피아·댈러스·시카고). z-score 기준 시작 = 댈러스 시작월
+const RFED_GA = ['GACDISA066MSFRBNY', 'GACDFSA066MSFRBPHI', 'BACTSAMFRBDAL', 'CFSBCACTIVITYMFG'];
+const Z_FROM = '2004-06-01';
 const NAV_ORDER = ['growth', 'gdp', 'flow', 'inflation', 'labor', 'industry', 'business', 'ism', 'household', 'housing',
   'trade', 'fiscal', 'money', 'banks', 'finance', 'credit'];
 
@@ -1126,7 +1130,7 @@ const PAGES = {
     group: 'us',
     parent: 'industry',
     title: 'ISM 지수',
-    desc: 'ISM 제조업·서비스업 PMI (월별, 계절조정). 50보다 높으면 확장, 낮으면 위축.',
+    desc: 'ISM 제조업·서비스업 PMI (월별, 계절조정). 50보다 높으면 확장, 낮으면 위축. 지역 연은 서베이는 FRED.',
     defaultPeriod: 's2020',
     charts: [
       { id: 'chart-ism-mfg', title: 'ISM 제조업 PMI', table: FRED_M, unit: 'pt', digits: 1, wide: true, ref: 50, defs: [
@@ -1136,6 +1140,14 @@ const PAGES = {
         { other: true, hidden: true, dash: [8, 3, 2, 3], label: '고용', exact: 'ISM_MFG_EMP' },
         { other: true, hidden: true, dash: [2, 6], label: '가격', exact: 'ISM_MFG_PRICES' },
       ], note: '점선 = 50(확장·위축 기준). 세부지수는 범례를 누르면 보여요' },
+      { id: 'chart-ism-rfed', title: 'ISM 제조업 vs 지역 연은 서베이 (z-score)', table: FRED_M, unit: 'z', digits: 2, wide: true, ref: 0, defs: [
+        { color: '--base-rate', label: 'ISM 제조업', exact: 'ISM_MFG_PMI', zscore: Z_FROM },
+        { color: '--slot-1', label: '지역 연은 4곳 평균', zavg: RFED_GA, zscore: Z_FROM },
+        { other: true, hidden: true, dash: 'dashed', label: '뉴욕', exact: 'GACDISA066MSFRBNY', zscore: Z_FROM },
+        { other: true, hidden: true, dash: 'dotted', label: '필라델피아', exact: 'GACDFSA066MSFRBPHI', zscore: Z_FROM },
+        { other: true, hidden: true, dash: [8, 3, 2, 3], label: '댈러스', exact: 'BACTSAMFRBDAL', zscore: Z_FROM },
+        { other: true, hidden: true, dash: [2, 6], label: '시카고', exact: 'CFSBCACTIVITYMFG', zscore: Z_FROM },
+      ], note: '각 지수를 2004.6 이후 평균·표준편차로 표준화(시카고는 2013.2~ 자료 전체). 지역 연은 = 뉴욕·필라델피아·댈러스 현재 일반경기, 시카고 제조업 활동 지수 평균(4곳 모두 나온 달만). 리치먼드·캔자스시티는 FRED에 없어 제외. 지역 서베이는 ISM보다 먼저 발표돼요' },
       { id: 'chart-ism-svc', title: 'ISM 서비스업 PMI', table: FRED_M, unit: 'pt', digits: 1, wide: true, ref: 50, defs: [
         { color: '--base-rate', label: '서비스업 PMI', exact: 'ISM_SVC_PMI' },
         { other: true, hidden: true, dash: 'dashed', label: '신규주문', exact: 'ISM_SVC_NEWORD' },
@@ -1293,7 +1305,29 @@ function indexTo({ dates, vals }, day) {
   return { dates, vals: vals.map((v) => (v !== null && base ? (v / base) * 100 : null)) };
 }
 
+function zscore({ dates, vals }, day) {
+  const from = Date.parse(`${day}T00:00:00Z`);
+  const xs = vals.filter((v, i) => v !== null && dates[i] >= from);
+  if (xs.length < 2) return { dates, vals: vals.map(() => null) };
+  const mean = xs.reduce((a, b) => a + b, 0) / xs.length;
+  const sd = Math.sqrt(xs.reduce((a, b) => a + (b - mean) ** 2, 0) / (xs.length - 1));
+  return { dates, vals: vals.map((v) => (v === null ? null : (v - mean) / sd)) };
+}
+
+function zavgValues(table, def) {
+  const parts = def.zavg.map((c) => valuesOf(table, { exact: c, zscore: def.zscore }));
+  if (parts.some((p) => !p)) return null;
+  const maps = parts.map((p) => new Map(p.dates.map((t, i) => [t, p.vals[i]])));
+  const dates = [...new Set(parts.flatMap((p) => p.dates))].sort((a, b) => a - b);
+  const vals = dates.map((t) => {
+    const xs = maps.map((m) => m.get(t));
+    return xs.some((x) => x == null) ? null : xs.reduce((a, b) => a + b, 0) / xs.length;
+  });
+  return { dates, vals };
+}
+
 function valuesOf(table, def) {
+  if (def.zavg) return table ? zavgValues(table, def) : null;
   if (def.calc) {
     let v = calcValues(def);
     if (v && def.shiftYears) v = shiftYears(v, def.shiftYears);
@@ -1348,6 +1382,7 @@ function valuesOf(table, def) {
     const at = new Map(other.dates.map((t, i) => [t, other.vals[i]]));
     vals = vals.map((v, i) => { const w = at.get(dates[i]); return v !== null && w != null ? v - w : null; });
   }
+  if (def.zscore) return zscore({ dates, vals }, def.zscore);
   return def.indexTo ? indexTo({ dates, vals }, def.indexTo) : { dates, vals };
 }
 
@@ -1833,7 +1868,7 @@ function seriesFor(table) {
     for (const spec of cfg.charts) {
       for (const def of allDefs(spec)) {
         if (def.calc) def.calc.inputs.filter((i) => i.table === table).forEach((i) => out.add(i.col));
-        else if (tableOf(spec, def) === table) [def.exact, def.div, def.minus, ...(def.splice || [])].filter(Boolean).forEach((c) => out.add(c));
+        else if (tableOf(spec, def) === table) [def.exact, def.div, def.minus, ...(def.splice || []), ...(def.zavg || [])].filter(Boolean).forEach((c) => out.add(c));
       }
     }
     (cfg.panels || []).filter((p) => p.table === table).forEach((p) => p.rows.forEach(([t]) => out.add(t)));

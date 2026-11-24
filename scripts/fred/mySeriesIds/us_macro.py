@@ -468,6 +468,90 @@ ids_M = [
     'NOCDISA066MSFRBNY', # Current New Orders; Diffusion Index for New York
     'PPCDISA066MSFRBNY', # Current Prices Paid; Diffusion Index for New York
     'GAFDISA066MSFRBNY', # Future General Business Conditions; Diffusion Index for New York
+    'AWCDISA066MSFRBNY', # Current Average Employee Workweek; Diffusion Index for New York
+    'DTCDISA066MSFRBNY', # Current Delivery Time; Diffusion Index for New York
+    'IVCDISA066MSFRBNY', # Current Inventories; Diffusion Index for New York
+    'NECDISA066MSFRBNY', # Current Number of Employees; Diffusion Index for New York
+    'PRCDISA066MSFRBNY', # Current Prices Received; Diffusion Index for New York
+    'SHCDISA066MSFRBNY', # Current Shipments; Diffusion Index for New York
+    'UOCDISA066MSFRBNY', # Current Unfilled Orders; Diffusion Index for New York
+    'AWFDISA066MSFRBNY', # Future Average Employee Workweek; Diffusion Index for New York
+    'DTFDISA066MSFRBNY', # Future Delivery Time; Diffusion Index for New York
+    'IVFDISA066MSFRBNY', # Future Inventories; Diffusion Index for New York
+    'NOFDISA066MSFRBNY', # Future New Orders; Diffusion Index for New York
+    'NEFDISA066MSFRBNY', # Future Number of Employees; Diffusion Index for New York
+    'PPFDISA066MSFRBNY', # Future Prices Paid; Diffusion Index for New York
+    'PRFDISA066MSFRBNY', # Future Prices Received; Diffusion Index for New York
+    'SHFDISA066MSFRBNY', # Future Shipments; Diffusion Index for New York
+    'UOFDISA066MSFRBNY', # Future Unfilled Orders; Diffusion Index for New York
+
+    # Philadelphia Fed Manufacturing Business Outlook Survey
+    'DTCDFSA066MSFRBPHI', # Current Delivery Time; Diffusion Index for Federal Reserve District 3: Philadelphia
+    'NECDFSA066MSFRBPHI', # Current Employment; Diffusion Index for Federal Reserve District 3: Philadelphia
+    'GACDFSA066MSFRBPHI', # Current General Activity; Diffusion Index for Federal Reserve District 3: Philadelphia
+    'IVCDFSA066MSFRBPHI', # Current Inventories; Diffusion Index for Federal Reserve District 3: Philadelphia
+    'NOCDFSA066MSFRBPHI', # Current New Orders; Diffusion Index for Federal Reserve District 3: Philadelphia
+    'PPCDFSA066MSFRBPHI', # Current Prices Paid; Diffusion Index for Federal Reserve District 3: Philadelphia
+    'PRCDFSA066MSFRBPHI', # Current Prices Received; Diffusion Index for Federal Reserve District 3: Philadelphia
+    'SHCDFSA066MSFRBPHI', # Current Shipments; Diffusion Index for Federal Reserve District 3: Philadelphia
+    'UOCDFSA066MSFRBPHI', # Current Unfilled Orders; Diffusion Index for Federal Reserve District 3: Philadelphia
+    'AWCDFSA066MSFRBPHI', # Current Work Hours; Diffusion Index for Federal Reserve District 3: Philadelphia
+    'CEFDFSA066MSFRBPHI', # Future Capital Expenditures; Diffusion Index for Federal Reserve District 3: Philadelphia
+    'DTFDFSA066MSFRBPHI', # Future Delivery Time; Diffusion Index for Federal Reserve District 3: Philadelphia
+    'NEFDFSA066MSFRBPHI', # Future Employment; Diffusion Index for Federal Reserve District 3: Philadelphia
+    'GAFDFSA066MSFRBPHI', # Future General Activity; Diffusion Index for Federal Reserve District 3: Philadelphia
+    'IVFDFSA066MSFRBPHI', # Future Inventories; Diffusion Index for Federal Reserve District 3: Philadelphia
+    'NOFDFSA066MSFRBPHI', # Future New Orders; Diffusion Index for Federal Reserve District 3: Philadelphia
+    'PPFDFSA066MSFRBPHI', # Future Prices Paid; Diffusion Index for Federal Reserve District 3: Philadelphia
+    'PRFDFSA066MSFRBPHI', # Future Prices Received; Diffusion Index for Federal Reserve District 3: Philadelphia
+    'SHFDFSA066MSFRBPHI', # Future Shipments; Diffusion Index for Federal Reserve District 3: Philadelphia
+    'UOFDFSA066MSFRBPHI', # Future Unfilled Orders; Diffusion Index for Federal Reserve District 3: Philadelphia
+    'AWFDFSA066MSFRBPHI', # Future Work Hours; Diffusion Index for Federal Reserve District 3: Philadelphia
+
+    # Dallas Fed Texas Manufacturing Outlook Survey
+    'CAPUSAMFRBDAL', # Current Capacity Utilization; Diffusion Index for Texas
+    'CEXPSAMFRBDAL', # Current Capital Expenditures; Diffusion Index for Texas
+    'COLKSAMFRBDAL', # Current Company Outlook; Diffusion Index for Texas
+    'DTMSAMFRBDAL', # Current Delivery Time; Diffusion Index for Texas
+    'NEMPSAMFRBDAL', # Current Employment; Diffusion Index for Texas
+    'FGISAMFRBDAL', # Current Finished Goods Inventories; Diffusion Index for Texas
+    'BACTSAMFRBDAL', # Current General Business Activity; Diffusion Index for Texas
+    'GROSAMFRBDAL', # Current Growth Rate of Orders; Diffusion Index for Texas
+    'AVGWKSAMFRBDAL', # Current Hours Worked; Diffusion Index for Texas
+    'VNWOSAMFRBDAL', # Current New Orders; Diffusion Index for Texas
+    'PRMSAMFRBDAL', # Current Prices Paid for Raw Materials; Diffusion Index for Texas
+    'PFGSAMFRBDAL', # Current Prices Received for Finished Goods; Diffusion Index for Texas
+    'PRODSAMFRBDAL', # Current Production; Diffusion Index for Texas
+    'VSHPSAMFRBDAL', # Current Shipments; Diffusion Index for Texas
+    'UFILSAMFRBDAL', # Current Unfilled Orders; Diffusion Index for Texas
+    'WGSSAMFRBDAL', # Current Wages and Benefits; Diffusion Index for Texas
+    'FCAPUSAMFRBDAL', # Future Capacity Utilization; Diffusion Index for Texas
+    'FCEXPSAMFRBDAL', # Future Capital Expenditures; Diffusion Index for Texas
+    'FCOLKSAMFRBDAL', # Future Company Outlook; Diffusion Index for Texas
+    'FDTMSAMFRBDAL', # Future Delivery Time; Diffusion Index for Texas
+    'FNEMPSAMFRBDAL', # Future Employment; Diffusion Index for Texas
+    'FFGISAMFRBDAL', # Future Finished Goods Inventories; Diffusion Index for Texas
+    'FBACTSAMFRBDAL', # Future General Business Activity; Diffusion Index for Texas
+    'FGROSAMFRBDAL', # Future Growth Rate of Orders; Diffusion Index for Texas
+    'FAVGWKSAMFRBDAL', # Future Hours Worked; Diffusion Index for Texas
+    'FVNWOSAMFRBDAL', # Future New Orders; Diffusion Index for Texas
+    'FPRMSAMFRBDAL', # Future Prices Paid for Raw Materials; Diffusion Index for Texas
+    'FPFGSAMFRBDAL', # Future Prices Received for Finished Goods; Diffusion Index for Texas
+    'FPRODSAMFRBDAL', # Future Production; Diffusion Index for Texas
+    'FVSHPSAMFRBDAL', # Future Shipments; Diffusion Index for Texas
+    'FUFILSAMFRBDAL', # Future Unfilled Orders; Diffusion Index for Texas
+    'FWGSSAMFRBDAL', # Future Wages and Benefits; Diffusion Index for Texas
+
+    # Chicago Fed Survey of Economic Conditions
+    'CFSBCOUTLOOK', # Chicago Fed Survey of Economic Conditions: 12 month Outlook for the US Economy in Federal Reserve District 7: Chicago
+    'CFSBCACTIVITY', # Chicago Fed Survey of Economic Conditions: Activity Index in Federal Reserve District 7: Chicago
+    'CFSBCCAPXEXP', # Chicago Fed Survey of Economic Conditions: Capital Spending Expectations in the next 12 Months in Federal Reserve District 7: Chicago
+    'CFSBCHIRING', # Chicago Fed Survey of Economic Conditions: Current Hiring Index in Federal Reserve District 7: Chicago
+    'CFSBCHIRINGEXP', # Chicago Fed Survey of Economic Conditions: Hiring Expectations in the next 12 Months in Federal Reserve District 7: Chicago
+    'CFSBCLABORCOSTS', # Chicago Fed Survey of Economic Conditions: Labor Costs Index in Federal Reserve District 7: Chicago
+    'CFSBCACTIVITYMFG', # Chicago Fed Survey of Economic Conditions: Manufacturing Activity Index in Federal Reserve District 7: Chicago
+    'CFSBCNONLABORCOSTS', # Chicago Fed Survey of Economic Conditions: Nonlabor Costs Index in Federal Reserve District 7: Chicago
+    'CFSBCACTIVITYNMFG', # Chicago Fed Survey of Economic Conditions: Nonmanufacturing Activity Index in Federal Reserve District 7: Chicago
 
     # Business Sentiment
     'BSCICP02USM460S', # Business Tendency Surveys (Manufacturing): Confidence Indicators: Composite Indicators: National Indicator for United States
