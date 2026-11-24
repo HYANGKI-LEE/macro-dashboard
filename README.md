@@ -7,6 +7,7 @@
 |---|---|---|
 | `data/fred_daily.db` · `fred_weekly.db` · `fred_monthly.db` · `fred_quarterly.db` | FRED (`scripts/fred/mySeriesIds/us_macro.py` 티커 전체) | `python scripts/fred/build_fred_db.py` |
 | `data/ism.db` (+ `fred_monthly.db`의 `ISM_*` 칼럼) | ISM 제조업·서비스업 PMI (인포맥스 엑셀 `data/Infomax_data.xlsx` ISM 시트, 로컬 전용) | `python scripts/excel/build_ism_db.py` |
+| `fred_monthly.db`의 `RICH_*` 칼럼 | 리치먼드 연은 제조업 서베이 (연은 홈페이지 엑셀, FRED에 없음) | `python scripts/richmond/build_richmond_db.py` |
 
 DB 구조는 모두 같다: `market`(date + 지표별 칼럼), `series`(칼럼 정보), `meta`(업데이트 시각).
 FRED 스크립트는 로컬 `.env` 의 `FRED_API_KEY` 를 쓴다(git 제외).

@@ -1,5 +1,5 @@
 // 파일을 바꿀 때마다 올려서 브라우저 캐시 대신 새 파일을 받게 한다 (index.html의 ?v= 와 같이 맞출 것)
-const VERSION = '20261124a';
+const VERSION = '20261124b';
 
 // ===== 데이터(DB) =====
 // data/<이름>.db 를 페이지에 필요한 것만 받아 온다. 이름의 '_' 뒤가 주기(daily/weekly/monthly/quarterly).
@@ -672,8 +672,8 @@ const FRED_TABLE = (eid) => `https://fred.stlouisfed.org/release/tables?rid=53&e
 // heading: 이 차트 앞에 소제목 줄을 넣고 새 줄부터 시작 (예: '연체잔액비중 : 상품별').
 const GROUPS = [['us', '미국']];
 // 사이드바 순서 (Bloomberg ECST 분류 기준). 하위 페이지(parent)는 상위 바로 뒤에. 여기 없는 페이지는 그 뒤에 정의 순서대로
-// 지역 연은 제조업 서베이 현재 일반경기 (뉴욕·필라델피아·댈러스·시카고). z-score 기준 시작 = 댈러스 시작월
-const RFED_GA = ['GACDISA066MSFRBNY', 'GACDFSA066MSFRBPHI', 'BACTSAMFRBDAL', 'CFSBCACTIVITYMFG'];
+// 지역 연은 제조업 서베이 현재 일반경기 (뉴욕·필라델피아·댈러스, 리치먼드 합성지수, 시카고 제조업). z-score 기준 시작 = 댈러스 시작월
+const RFED_GA = ['GACDISA066MSFRBNY', 'GACDFSA066MSFRBPHI', 'BACTSAMFRBDAL', 'RICH_SA_COMPOSITE', 'CFSBCACTIVITYMFG'];
 const Z_FROM = '2004-06-01';
 const NAV_ORDER = ['growth', 'gdp', 'flow', 'inflation', 'labor', 'industry', 'business', 'ism', 'household', 'housing',
   'trade', 'fiscal', 'money', 'banks', 'finance', 'credit'];
@@ -1130,7 +1130,7 @@ const PAGES = {
     group: 'us',
     parent: 'industry',
     title: 'ISM 지수',
-    desc: 'ISM 제조업·서비스업 PMI (월별, 계절조정). 50보다 높으면 확장, 낮으면 위축. 지역 연은 서베이는 FRED.',
+    desc: 'ISM 제조업·서비스업 PMI (월별, 계절조정). 50보다 높으면 확장, 낮으면 위축. 지역 연은 서베이는 FRED와 리치먼드 연은.',
     defaultPeriod: 's2020',
     charts: [
       { id: 'chart-ism-mfg', title: 'ISM 제조업 PMI', table: FRED_M, unit: 'pt', digits: 1, wide: true, ref: 50, defs: [
@@ -1142,12 +1142,13 @@ const PAGES = {
       ], note: '점선 = 50(확장·위축 기준). 세부지수는 범례를 누르면 보여요' },
       { id: 'chart-ism-rfed', title: 'ISM 제조업 vs 지역 연은 서베이 (z-score)', table: FRED_M, unit: 'z', digits: 2, wide: true, ref: 0, defs: [
         { color: '--base-rate', label: 'ISM 제조업', exact: 'ISM_MFG_PMI', zscore: Z_FROM },
-        { color: '--slot-1', label: '지역 연은 4곳 평균', zavg: RFED_GA, zscore: Z_FROM },
+        { color: '--slot-1', label: '지역 연은 5곳 평균', zavg: RFED_GA, zscore: Z_FROM },
         { other: true, hidden: true, dash: 'dashed', label: '뉴욕', exact: 'GACDISA066MSFRBNY', zscore: Z_FROM },
         { other: true, hidden: true, dash: 'dotted', label: '필라델피아', exact: 'GACDFSA066MSFRBPHI', zscore: Z_FROM },
         { other: true, hidden: true, dash: [8, 3, 2, 3], label: '댈러스', exact: 'BACTSAMFRBDAL', zscore: Z_FROM },
+        { other: true, hidden: true, dash: [4, 2], label: '리치먼드', exact: 'RICH_SA_COMPOSITE', zscore: Z_FROM },
         { other: true, hidden: true, dash: [2, 6], label: '시카고', exact: 'CFSBCACTIVITYMFG', zscore: Z_FROM },
-      ], note: '각 지수를 2004.6 이후 평균·표준편차로 표준화(시카고는 2013.2~ 자료 전체). 지역 연은 = 뉴욕·필라델피아·댈러스 현재 일반경기, 시카고 제조업 활동 지수 평균(4곳 모두 나온 달만). 리치먼드·캔자스시티는 FRED에 없어 제외. 지역 서베이는 ISM보다 먼저 발표돼요' },
+      ], note: '각 지수를 2004.6 이후 평균·표준편차로 표준화(시카고는 2013.2~ 자료 전체). 지역 연은 = 뉴욕·필라델피아·댈러스 현재 일반경기, 리치먼드 합성지수, 시카고 제조업 활동 지수 평균(5곳 모두 나온 달만). 캔자스시티는 제외. 리치먼드 출처: Federal Reserve Bank of Richmond. 지역 서베이는 ISM보다 먼저 발표돼요' },
       { id: 'chart-ism-svc', title: 'ISM 서비스업 PMI', table: FRED_M, unit: 'pt', digits: 1, wide: true, ref: 50, defs: [
         { color: '--base-rate', label: '서비스업 PMI', exact: 'ISM_SVC_PMI' },
         { other: true, hidden: true, dash: 'dashed', label: '신규주문', exact: 'ISM_SVC_NEWORD' },
